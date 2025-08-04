@@ -9,7 +9,7 @@ st.title("AI 기반 주식 매수 타점 추천")
 
 user_ticker = st.text_input("분석할 종목 티커를 입력하세요 (예: AAPL, MSFT)")
 
-# 가중치 조절 (필요하면 사이드바에 추가 가능)
+# 가중치 (필요에 따라 조절 가능)
 weight_rsi_30 = 1
 weight_rsi_20 = 2
 weight_cci_100 = 1
@@ -133,3 +133,4 @@ if user_ticker:
                 st.info("매수 신호가 부족하여 점수를 산출할 수 없습니다.")
     except Exception as e:
         st.error(f"데이터 불러오기 오류: {e}")
+
