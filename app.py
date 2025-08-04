@@ -72,5 +72,36 @@ def check_buy_score(
     target_price = entry_price + (3 * latest_atr)
 
     return {
-        'EntryPrice': round(entry_price, 2),
-        'StopL
+        "EntryPrice": round(entry_price, 2),
+        "StopLoss": round(stop_loss, 2),
+        "TargetPrice": round(target_price, 2),
+        "RSI": round(latest_rsi, 2),
+        "BollingerLow": round(latest_bb_low, 2),
+        "ADX": round(latest_adx, 2),
+        "CCI": round(latest_cci, 2),
+        "ATR": round(latest_atr, 4),
+        "Score": score,
+        "VolumeStatus": vol_status
+    }
+
+# 🖥️ Streamlit UI
+st.title("📈 AI 주식 매수 타점 추천 앱")
+st.markdown("특정 종목의 매수 점수를 계산합니다.")
+
+# 종목 입력 받기
+user_ticker = st.text_input("티커를 입력하세요 (예: NVDA, AAPL, TSLA)", value="NVDA")
+
+if st.button("매수 타점 분석 시작"):
+    with st.spinner("분석 중..."):
+        data = get_data(user_ticker.upper())
+        result = check_buy_score(data)
+
+        if result is None:
+            st.warning("해당 종목에 대한 분석 결과가 없습니다.")
+        elif isinstance(result, str):
+            st.error(result)  # 지표 계산 오류 시
+        else:
+            st.success(f"💹 종목: {user_ticker.upper()} 분석 완료")
+            st.metric("📊 점수", f"{result['Score']} / 10")
+            st.write("🔍 상세 분석:")
+            st.json(result)
