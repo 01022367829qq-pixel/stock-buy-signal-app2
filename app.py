@@ -5,8 +5,7 @@ import numpy as np
 import plotly.graph_objects as go
 from ta.momentum import RSIIndicator, StochasticOscillator
 from ta.trend import MACD, CCIIndicator, ADXIndicator
-from ta.volatility import BollingerBands
-from ta.volatility import AverageTrueRange
+from ta.volatility import BollingerBands, AverageTrueRange
 
 # 1. 앱 기본 설정
 st.set_page_config(page_title="📈 자산 분석 점수 시스템", layout="wide")
@@ -22,12 +21,6 @@ st.markdown("""
 ticker = st.text_input("🔍 티커를 입력하세요 (예: AAPL, TSLA, BTC-USD, QQQ)", "AAPL")
 asset_type = st.selectbox("자산 종류를 선택하세요", ["📈 주식", "💰 암호화폐", "📦 ETF"])
 
-# 시리즈 형태 보장 함수
-def ensure_series(col):
-    if isinstance(col, pd.DataFrame):
-        return col.squeeze()
-    return col
-
 # 4. 데이터 다운로드
 try:
     df = yf.download(ticker, period="6mo", interval="1d")
@@ -39,27 +32,36 @@ except Exception as e:
     st.error("❌ 데이터를 불러오지 못했습니다.")
     st.stop()
 
-# 5. 지표 계산 (ensure_series 적용)
-df["RSI"] = RSIIndicator(ensure_series(df["Close"])).rsi()
-df["STOCH"] = StochasticOscillator(ensure_series(df["High"]), ensure_series(df["Low"]), ensure_series(df["Close"])).stoch()
-df["CCI"] = CCIIndicator(ensure_series(df["High"]), ensure_series(df["Low"]), ensure_series(df["Close"])).cci()
-df["ADX"] = ADXIndicator(ensure_series(df["High"]), ensure_series(df["Low"]), ensure_series(df["Close"])).adx()
-bb = BollingerBands(ensure_series(df["Close"]))
+# 5. 지표 계산
+df["RSI"] = RSIIndicator(df["Close"]).rsi()
+df["STOCH"] = StochasticOscillator(df["High"], df["Low"], df["Close"]).stoch()
+df["CCI"] = CCIIndicator(df["High"], df["Low"], df["Close"]).cci()
+df["ADX"] = ADXIndicator(df["High"], df["Low"], df["Close"]).adx()
+bb = BollingerBands(df["Close"])
 df["BB_bbm"] = bb.bollinger_mavg()
 df["BB_bbh"] = bb.bollinger_hband()
 df["BB_bbl"] = bb.bollinger_lband()
-df["ATR"] = AverageTrueRange(ensure_series(df["High"]), ensure_series(df["Low"]), ensure_series(df["Close"])).average_true_range()
-df["MACD"] = MACD(ensure_series(df["Close"])).macd()
+df["ATR"] = AverageTrueRange(df["High"], df["Low"], df["Close"]).average_true_range()
+df["MACD"] = MACD(df["Close"]).macd()
 
-# 6. 점수 계산 함수
+# 6. 점수 계산 함수 (NaN 안전 체크 추가)
 def calculate_entry_score(row):
     score = 0
-    if row["RSI"] < 35: score += 2
-    if row["STOCH"] < 30: score += 2
-    if row["CCI"] < -100: score += 2
-    if row["ADX"] > 20: score += 1
-    if row["Close"] < row["BB_bbl"]: score += 2
-    if row["MACD"] > 0: score += 1
+    try:
+        if pd.notna(row["RSI"]) and row["RSI"] < 35: 
+            score += 2
+        if pd.notna(row["STOCH"]) and row["STOCH"] < 30: 
+            score += 2
+        if pd.notna(row["CCI"]) and row["CCI"] < -100: 
+            score += 2
+        if pd.notna(row["ADX"]) and row["ADX"] > 20: 
+            score += 1
+        if pd.notna(row["Close"]) and pd.notna(row["BB_bbl"]) and row["Close"] < row["BB_bbl"]: 
+            score += 2
+        if pd.notna(row["MACD"]) and row["MACD"] > 0: 
+            score += 1
+    except Exception:
+        return 0
     return score
 
 # 7. 분석 결과 적용
