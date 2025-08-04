@@ -84,6 +84,15 @@ def check_buy_score(
         "VolumeStatus": vol_status
     }
 
+# 점수에 따른 추천 멘트 함수
+def get_recommendation(score):
+    if score >= 7:
+        return "🟢 매수 고려해볼 수 있습니다."
+    elif score >= 4:
+        return "🟡 관망 또는 주의 깊은 관심 필요"
+    else:
+        return "🔴 매수 신호가 약합니다. 보류하세요."
+
 # 🖥️ Streamlit UI
 st.title("📈 AI 주식 매수 타점 추천 앱")
 st.markdown("특정 종목의 매수 점수를 계산합니다.")
@@ -101,7 +110,11 @@ if st.button("매수 타점 분석 시작"):
         elif isinstance(result, str):
             st.error(result)  # 지표 계산 오류 시
         else:
+            score = result["Score"]
             st.success(f"💹 종목: {user_ticker.upper()} 분석 완료")
-            st.metric("📊 점수", f"{result['Score']} / 10")
-            st.write("🔍 상세 분석:")
+            st.subheader(f"📊 점수: {score} / 10")
+            st.progress(min(score / 10, 1.0))  # 점수 기반 progress bar
+            st.write(get_recommendation(score))
+            st.markdown("### 🔍 상세 분석")
             st.json(result)
+
