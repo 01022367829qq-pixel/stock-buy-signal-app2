@@ -3,17 +3,32 @@ import yfinance as yf
 import pandas as pd
 import ta
 
-# 점수 계산 함수
-def check_buy_signal(df):
+# 📌 종목 데이터 가져오기
+def get_data(ticker):
+    df = yf.download(ticker, period='60d', interval='1d', progress=False, auto_adjust=True)
+    return df
+
+# 📌 매수 신호 점수 계산 함수
+def check_buy_score(
+    df,
+    weight_rsi_30=1,
+    weight_rsi_20=1,
+    weight_cci_100=1,
+    weight_cci_150=1,
+    weight_adx_25=1,
+    weight_adx_20=1,
+    weight_bb_low_101=1,
+    weight_bb_low_1005=1
+):
     if df.empty or len(df) < 20:
-        return 0, "데이터 부족"
+        return None
 
-    close = df['Close']
-    high = df['High']
-    low = df['Low']
-    volume = df['Volume']
+    # 1D Series로 변환
+    close = df['Close'].squeeze()
+    high = df['High'].squeeze()
+    low = df['Low'].squeeze()
+    volume = df['Volume'].squeeze()
 
-    # 지표 계산
     try:
         bb = ta.volatility.BollingerBands(close=close, window=20, window_dev=2)
         rsi = ta.momentum.RSIIndicator(close=close, window=14).rsi()
@@ -21,41 +36,41 @@ def check_buy_signal(df):
         cci = ta.trend.CCIIndicator(high=high, low=low, close=close, window=20).cci()
         atr = ta.volatility.AverageTrueRange(high=high, low=low, close=close, window=14).average_true_range()
     except Exception as e:
-        return 0, f"지표 계산 오류: {e}"
+        return f"지표 계산 오류: {e}"
 
-    latest = {
-        'close': close.iloc[-1],
-        'rsi': rsi.iloc[-1],
-        'adx': adx.iloc[-1],
-        'cci': cci.iloc[-1],
-        'bb_low': bb.bollinger_lband().iloc[-1],
-        'atr': atr.iloc[-1]
-    }
+    latest_close = close.iloc[-1]
+    latest_rsi = rsi.iloc[-1]
+    latest_bb_low = bb.bollinger_lband().iloc[-1]
+    latest_adx = adx.iloc[-1]
+    latest_cci = cci.iloc[-1]
+    latest_atr = atr.iloc[-1]
+
+    recent_vol = volume.iloc[-1]
+    avg_vol_5d = volume.iloc[-6:-1].mean() if len(volume) >= 6 else volume.mean()
+    vol_status = "거래량 증가 O" if recent_vol > avg_vol_5d else "거래량 증가 X"
 
     score = 0
-    score += 10 if latest['rsi'] <= 30 else 0
-    score += 10 if latest['rsi'] <= 20 else 0
-    score += 10 if latest['cci'] <= -100 else 0
-    score += 10 if latest['cci'] <= -150 else 0
-    score += 10 if latest['adx'] <= 25 else 0
-    score += 10 if latest['adx'] <= 20 else 0
-    score += 20 if latest['close'] <= latest['bb_low'] * 1.01 else 0
-    score += 20 if latest['close'] <= latest['bb_low'] * 1.005 else 0
+    if latest_rsi <= 30:
+        score += weight_rsi_30
+    if latest_rsi <= 20:
+        score += weight_rsi_20
+    if latest_cci <= -100:
+        score += weight_cci_100
+    if latest_cci <= -150:
+        score += weight_cci_150
+    if latest_adx <= 25:
+        score += weight_adx_25
+    if latest_adx <= 20:
+        score += weight_adx_20
+    if latest_close <= latest_bb_low * 1.01:
+        score += weight_bb_low_101
+    if latest_close <= latest_bb_low * 1.005:
+        score += weight_bb_low_1005
 
-    return min(score, 100), "분석 완료"
+    entry_price = latest_close
+    stop_loss = entry_price - (1.5 * latest_atr)
+    target_price = entry_price + (3 * latest_atr)
 
-# UI 시작
-st.title("📊 AI 주식 매수 점수 분석기")
-ticker_input = st.text_input("종목 티커를 입력하세요 (예: NVDA)", "NVDA")
-
-if st.button("분석 시작"):
-    data = yf.download(ticker_input, period='60d', interval='1d', auto_adjust=True, progress=False)
-    score, msg = check_buy_signal(data)
-
-    if msg != "분석 완료":
-        st.warning(f"{msg}")
-    else:
-        st.subheader(f"🎯 {ticker_input.upper()} 종목의 매수 점수는 {score}점입니다!")
-        st.progress(score / 100)
-
-
+    return {
+        'EntryPrice': round(entry_price, 2),
+        'StopL
