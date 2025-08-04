@@ -7,17 +7,9 @@ st.set_page_config(page_title="AI 주식 매수 타점 추천 앱")
 
 st.title("AI 기반 주식 매수 타점 추천")
 
-user_ticker = st.text_input("분석할 종목 티커를 입력하세요 (예: AAPL, MSFT)")
+# 1) 티커 직접 입력해서 매수 타점 분석하는 기능
 
-# 가중치 (필요에 따라 조절 가능)
-weight_rsi_30 = 1
-weight_rsi_20 = 2
-weight_cci_100 = 1
-weight_cci_150 = 2
-weight_adx_25 = 1
-weight_adx_20 = 2
-weight_bb_low_101 = 1
-weight_bb_low_1005 = 1
+user_ticker = st.text_input("분석할 종목 티커를 입력하세요 (예: AAPL, MSFT)")
 
 def ensure_series_1d(series):
     if hasattr(series, 'values') and series.values.ndim > 1:
@@ -27,11 +19,11 @@ def ensure_series_1d(series):
 def check_buy_signal(
     df,
     weight_rsi_30=1,
-    weight_rsi_20=1,
+    weight_rsi_20=2,
     weight_cci_100=1,
-    weight_cci_150=1,
+    weight_cci_150=2,
     weight_adx_25=1,
-    weight_adx_20=1,
+    weight_adx_20=2,
     weight_bb_low_101=1,
     weight_bb_low_1005=1
 ):
@@ -118,9 +110,7 @@ if user_ticker:
         if df.empty:
             st.warning("데이터가 없습니다. 티커를 다시 확인해주세요.")
         else:
-            signal = check_buy_signal(df,
-                weight_rsi_30, weight_rsi_20, weight_cci_100, weight_cci_150,
-                weight_adx_25, weight_adx_20, weight_bb_low_101, weight_bb_low_1005)
+            signal = check_buy_signal(df)
             if signal:
                 st.metric("매수 점수 (0~100)", signal['Score'])
                 st.write(f"추천: **{signal['Recommendation']}**")
@@ -134,3 +124,32 @@ if user_ticker:
     except Exception as e:
         st.error(f"데이터 불러오기 오류: {e}")
 
+st.markdown("---")
+
+# 2) 카테고리 선택 및 데이터 표시
+
+st.header("시장 정보 및 카테고리 선택")
+
+category = st.selectbox("카테고리를 선택하세요",
+                        ["지수", "주식", "원자재", "통화", "ETF", "채권", "펀드", "암호화폐"])
+
+if category == "암호화폐":
+    crypto_tickers = ["BTC-USD", "ETH-USD", "XRP-USD", "LTC-USD", "DOGE-USD"]
+    st.write("암호화폐 가격 변동 (최근 7일):")
+    crypto_data = yf.download(crypto_tickers, period="7d", interval="1d", progress=False, auto_adjust=True)['Close']
+    st.dataframe(crypto_data.T.style.format("{:.2f}"))
+
+elif category == "지수":
+    indices = ["^GSPC", "^DJI", "^IXIC", "^KS11", "^N225"]
+    st.write("주요 지수 가격 변동 (최근 7일):")
+    indices_data = yf.download(indices, period="7d", interval="1d", progress=False, auto_adjust=True)['Close']
+    st.dataframe(indices_data.T.style.format("{:.2f}"))
+
+elif category == "원자재":
+    commodities = ["GC=F", "CL=F", "SI=F"]  # 금, 원유, 은
+    st.write("주요 원자재 가격 변동 (최근 7일):")
+    commodities_data = yf.download(commodities, period="7d", interval="1d", progress=False, auto_adjust=True)['Close']
+    st.dataframe(commodities_data.T.style.format("{:.2f}"))
+
+else:
+    st.write(f"{category} 데이터는 추후 추가 예정입니다.")
