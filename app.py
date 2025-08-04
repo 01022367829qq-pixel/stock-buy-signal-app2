@@ -1,96 +1,74 @@
-# app.py
 import streamlit as st
-import pandas as pd
-import numpy as np
 import yfinance as yf
+import pandas as pd
 import plotly.graph_objects as go
-from ta.momentum import RSIIndicator, StochasticOscillator
-from ta.trend import CCIIndicator, MACD, ADXIndicator
-from ta.volatility import BollingerBands
-from ta.volatility import AverageTrueRange
+from ta import momentum, volatility, trend
 
-st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
+st.set_page_config(layout="wide")
+st.title("📊 매수 타점 분석 & 변동성 분석")
 
-# 📌 기능: 기술 지표 점수 계산
-def calculate_score(df):
-    score = 0
-    try:
-        rsi = RSIIndicator(df['Close'], window=14).rsi().iloc[-1]
-        stoch = StochasticOscillator(df['High'], df['Low'], df['Close'], window=14).stoch().iloc[-1]
-        cci = CCIIndicator(df['High'], df['Low'], df['Close'], window=20).cci().iloc[-1]
-        adx = ADXIndicator(df['High'], df['Low'], df['Close'], window=14).adx().iloc[-1]
-        bb = BollingerBands(df['Close'], window=20)
-        bb_percent = ((df['Close'].iloc[-1] - bb.bollinger_lband().iloc[-1]) / (bb.bollinger_hband().iloc[-1] - bb.bollinger_lband().iloc[-1])) * 100
-        macd = MACD(df['Close']).macd_diff().iloc[-1]
-        atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=14).average_true_range().iloc[-1]
+# 사용자 입력
+asset_type = st.sidebar.selectbox("자산 종류 선택", ["주식", "ETF", "암호화폐"])
+ticker = st.sidebar.text_input("티커 입력 (예: AAPL, BTC-USD, QQQ)", value="AAPL")
 
-        # 점수 계산 (가중치 및 조건은 조정 가능)
-        if 30 < rsi < 50: score += 15
-        if stoch < 20: score += 15
-        if cci < -100: score += 15
-        if adx > 25: score += 10
-        if bb_percent < 30: score += 15
-        if macd > 0: score += 10
-        if atr / df['Close'].iloc[-1] > 0.03: score += 10
+# 데이터 가져오기
+@st.cache_data
+def load_data(ticker):
+    data = yf.download(ticker, period="3mo")
+    return data
 
-    except:
-        pass
+try:
+    df = load_data(ticker)
 
-    return round(score, 1)
-
-# 📌 기능: 매수 타점 자동 추정
-def get_buy_signal(df):
-    try:
-        rsi = RSIIndicator(df['Close'], window=14).rsi()
-        cci = CCIIndicator(df['High'], df['Low'], df['Close'], window=20).cci()
-        macd_diff = MACD(df['Close']).macd_diff()
-        adx = ADXIndicator(df['High'], df['Low'], df['Close'], window=14).adx()
-        
-        if (
-            rsi.iloc[-1] < 40 and
-            cci.iloc[-1] < -100 and
-            macd_diff.iloc[-1] > 0 and
-            adx.iloc[-1] > 20
-        ):
-            return True
-        else:
-            return False
-    except:
-        return False
-
-# 📌 기능: Plotly 차트 시각화
-def plot_candlestick(df, ticker):
-    fig = go.Figure(data=[
-        go.Candlestick(
-            x=df.index,
-            open=df['Open'], high=df['High'],
-            low=df['Low'], close=df['Close'],
-            name="가격"
-        )
-    ])
-    fig.update_layout(title=f"{ticker} 캔들차트", xaxis_rangeslider_visible=False)
-    return fig
-
-# 📌 UI 구성
-st.title("📊 주식 매수 타점 분석기")
-st.markdown("Made by **16살 미국 주식 트레이더 & 웹개발자**")
-
-ticker_input = st.text_input("🔍 분석할 종목 티커를 입력하세요 (예: AAPL, TSLA)", "KULR").upper()
-period = st.selectbox("조회 기간", ["1mo", "3mo", "6mo", "1y"], index=1)
-interval = st.selectbox("시간 간격", ["1d", "1h", "15m"], index=0)
-
-if st.button("📈 분석 시작"):
-    df = yf.download(ticker_input, period=period, interval=interval)
     if df.empty:
-        st.error("❌ 종목 데이터를 불러올 수 없습니다.")
+        st.error("❌ 유효하지 않은 티커입니다.")
     else:
-        score = calculate_score(df)
-        buy_signal = get_buy_signal(df)
-        asset_type = "암호화폐" if "-USD" in ticker_input else "ETF" if ticker_input.endswith("Q") else "주식"
+        df.dropna(inplace=True)
 
-        st.subheader(f"🔎 [{ticker_input}] 분석 결과")
-        st.write(f"📊 기술적 분석 점수: **{score}점 / 100점**")
-        st.write(f"💰 매수 신호 여부: {'✅ 발생함' if buy_signal else '❌ 아직 아님'}")
-        st.write(f"📦 자산 종류: {asset_type}")
-        
-        st.plotly_chart(plot_candlestick(df, ticker_input), use_container_width=True)
+        # Plot - 종가 차트
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="종가"))
+        fig.update_layout(title=f"{ticker} 종가 추이", xaxis_title="날짜", yaxis_title="가격")
+        st.plotly_chart(fig, use_container_width=True)
+
+        if asset_type == "주식":
+            # 기술 지표 계산
+            df["RSI"] = momentum.RSIIndicator(df["Close"]).rsi()
+            df["MACD"] = trend.MACD(df["Close"]).macd()
+            df["CCI"] = trend.CCIIndicator(df["High"], df["Low"], df["Close"]).cci()
+            df["ADX"] = trend.ADXIndicator(df["High"], df["Low"], df["Close"]).adx()
+            df["ATR"] = volatility.AverageTrueRange(df["High"], df["Low"], df["Close"]).average_true_range()
+
+            # 최신값
+            latest = df.iloc[-1]
+            rsi, macd, cci, adx, atr = latest["RSI"], latest["MACD"], latest["CCI"], latest["ADX"], latest["ATR"]
+
+            # 점수 계산 (0~100점)
+            score = 0
+            if rsi < 30: score += 20
+            elif rsi < 50: score += 10
+            if macd > 0: score += 20
+            if cci < -100: score += 20
+            if adx > 25: score += 20
+            if atr > df["ATR"].mean(): score += 20
+
+            st.subheader("🧠 매수 타점 점수")
+            st.metric(label="총점", value=f"{score}/100")
+
+            with st.expander("📌 보조지표 상세"):
+                st.write(f"📉 RSI: {rsi:.2f}")
+                st.write(f"📈 MACD: {macd:.2f}")
+                st.write(f"📊 CCI: {cci:.2f}")
+                st.write(f"📊 ADX: {adx:.2f}")
+                st.write(f"📏 ATR: {atr:.4f}")
+
+        else:
+            # ETF & 암호화폐: 일일 변동성만 출력
+            df["Daily Change %"] = df["Close"].pct_change() * 100
+            daily_volatility = df["Daily Change %"].rolling(window=5).std().iloc[-1]
+            st.subheader("📈 5일 평균 일일 변동성")
+            st.metric(label="Daily Volatility", value=f"{daily_volatility:.2f}%")
+
+except Exception as e:
+    st.error(f"⚠️ 에러 발생: {e}")
+
