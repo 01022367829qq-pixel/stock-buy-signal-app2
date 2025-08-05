@@ -42,60 +42,60 @@ st.markdown("""
 # ATR 계산 함수
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
-    high_close = np.abs(df['High'] - df['Close'].shift())
-    low_close = np.abs(df['Low'] - df['Close'].shift())
+    high_close = np.abs(df['High'] - df['Close'].shift(1))
+    low_close = np.abs(df['Low'] - df['Close'].shift(1))
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     atr = tr.rolling(period).mean()
     return atr
 
-# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용) - NaN 체크 수정
+# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용)
 def score_turtle_day_trading(df):
-    if df.empty or len(df) < 30:
+    # 데이터 충분성 체크
+    if df is None or df.empty or len(df) < 30:
         return 0, "데이터가 충분하지 않습니다."
 
+    # 지표 계산
     df = df.copy()
-    df['20d_high'] = df['High'].rolling(window=20).max().shift(1)  # 전일 기준 20일 최고가
-    df['10d_low'] = df['Low'].rolling(window=10).min().shift(1)    # 전일 기준 10일 최저가
-    df['ATR'] = calculate_atr(df, 14)
-    
-    last = df.iloc[-1]
+    df['20d_high'] = df['High'].rolling(window=20).max().shift(1)
+    df['10d_low']  = df['Low'].rolling(window=10).min().shift(1)
+    df['ATR']      = calculate_atr(df, 14)
+
+    # 마지막 값 추출 (스칼라)
+    close_last = df['Close'].iat[-1]
+    high_20d   = df['20d_high'].iat[-1]
+    low_10d    = df['10d_low'].iat[-1]
+    atr_val    = df['ATR'].iat[-1]
+
+    # NaN or None 체크
+    if any([high_20d is None, low_10d is None, atr_val is None,
+            (isinstance(high_20d, float) and np.isnan(high_20d)),
+            (isinstance(low_10d, float)  and np.isnan(low_10d)),
+            (isinstance(atr_val, float)  and np.isnan(atr_val))]):
+        return 0, "필요한 기술 지표 데이터가 부족합니다."
 
     score = 0
     messages = []
 
-    high_20d = last['20d_high']
-    low_10d = last['10d_low']
-    atr_val = last['ATR']
-
-    # NaN 및 None 체크 안전하게 처리
-    if any([
-        high_20d is None, low_10d is None, atr_val is None,
-        (isinstance(high_20d, float) and np.isnan(high_20d)),
-        (isinstance(low_10d, float) and np.isnan(low_10d)),
-        (isinstance(atr_val, float) and np.isnan(atr_val))
-    ]):
-        return 0, "필요한 기술 지표 데이터가 부족합니다."
-
-    # 1) 20일 고점 돌파 - 매수 신호
-    if last['Close'] > high_20d:
+    # 매수 신호
+    if close_last > high_20d:
         score += 50
         messages.append("20일 최고가 돌파: 매수 신호 강함")
 
-    # 2) 10일 저점 이탈 - 위험 신호 (점수 감점)
-    if last['Close'] < low_10d:
+    # 위험 신호
+    if close_last < low_10d:
         score -= 30
         messages.append("10일 최저가 이탈: 위험 신호")
 
-    # 3) ATR 기반 변동성 확인 - 변동성 높으면 점수 증가
-    atr_mean = df['ATR'].rolling(window=30).mean().iloc[-1]
-    if last['ATR'] > atr_mean:
+    # 변동성 증가 확인
+    atr_mean = df['ATR'].rolling(window=30).mean().iat[-1]
+    if atr_val > atr_mean:
         score += 30
         messages.append("ATR 증가: 변동성 높음")
 
-    # 점수 0~100 제한
+    # 점수 한계 설정
     score = max(0, min(100, score))
 
-    if len(messages) == 0:
+    if not messages:
         messages.append("신호 없음 - 관망 권장")
 
     return score, "; ".join(messages)
@@ -108,14 +108,15 @@ st.markdown("---")
 # 카드 묶음 1
 col1, col2, col3 = st.columns(3)
 
+# 데이 트레이딩 카드: 터틀 전략 변형 적용
 with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>당일 매수/매도, 고변동성 단타 매매. 수 분~수 시간 보유.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-desc'>20일 고점 돌파 + 위험 구간 이탈 + ATR 기반 점수 산정</div>", unsafe_allow_html=True)
         ticker1 = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker1")
         if st.button("🔍 분석", key="btn1"):
-            if ticker1.strip() == "":
+            if not ticker1.strip():
                 st.warning("티커를 입력하세요.")
             else:
                 df = yf.download(ticker1, period="3mo", interval="1d")
@@ -127,6 +128,7 @@ with col1:
                     st.info(msg)
         st.markdown("</div>", unsafe_allow_html=True)
 
+# 스윙, 포지션 등 나머지 카드(기본 UI만)
 with col2:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
