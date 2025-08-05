@@ -14,6 +14,7 @@ st.markdown("""
     text-align: left;
     padding: 5px 0 5px 0;  /* 상하 5px, 좌우 0 */
     margin-left: 0;
+    margin-top: -10px;  /* 위로 10px 올림 */
 }
 </style>
 """, unsafe_allow_html=True)
