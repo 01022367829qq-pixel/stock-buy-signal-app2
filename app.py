@@ -89,8 +89,9 @@ def calculate_adx(df, period=14):
     dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
     adx = dx.rolling(period).mean()
 
-    # 인덱스 맞추기
-    adx = adx.reindex(df.index)
+    # 인덱스 맞추기 (중요)
+    adx.index = df.index
+
     return adx
 
 # 데이 트레이딩 점수 함수
@@ -199,26 +200,26 @@ def score_swing_trading(df):
         score -= 10
         msgs.append(f"ADX({adx:.1f}) 약한 추세")
 
-    if bbw < bbw.mean():
-        score += 10
-        msgs.append("BB 폭 좁음")
+    prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
+    if bbw < df['BB_width'].rolling(20).mean().iloc[-1] * 0.8 and close > prev_upper:
+        score += 15
+        msgs.append("BB 수축 후 상단 돌파")
 
     if vol > vol_mean * 1.2:
-        score += 10
+        score += 15
         msgs.append("거래량 증가")
 
     score = max(0, min(100, score))
     if not msgs:
         msgs = ["신호 없음"]
 
-    # 진입/목표/손절가 설정 (ADX에 따른 조정)
     entry_price = close
     if adx > 25:
-        target_price = close * 1.07  # 7% 목표가
-        stop_loss = close * 0.95    # 5% 손절가
-    else:
         target_price = close * 1.05  # 5% 목표가
         stop_loss = close * 0.93     # 7% 손절가
+    else:
+        target_price = close * 1.03
+        stop_loss = close * 0.95
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
