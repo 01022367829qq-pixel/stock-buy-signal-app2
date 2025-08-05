@@ -106,7 +106,18 @@ def score_turtle_enhanced(df):
     vol         = last['Volume']
     vol_mean    = last['Vol_mean']
 
-    if any(pd.isna(x) for x in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]):
+        # NaN 또는 None 체크
+    nan_flag = False
+    for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
+        try:
+            if isinstance(val, float) and np.isnan(val):
+                nan_flag = True
+                break
+        except:
+            if val is None:
+                nan_flag = True
+                break
+    if nan_flag:
         return 0, "필요한 기술 지표 데이터가 부족합니다."
 
     score = 0
