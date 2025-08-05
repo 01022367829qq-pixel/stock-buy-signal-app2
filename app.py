@@ -283,7 +283,7 @@ def score_position_trading(df):
 
 # UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 col1, col2, col3 = st.columns(3)
