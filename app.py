@@ -8,14 +8,16 @@ st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 st.markdown("""
 <style>
 .app-title {
-    font-size: 50px;
+    font-size: 40px;
     font-weight: bold;
     color: #4CAF50;
     text-align: left;
-    padding: 10px 0;
+    padding: 5px 0 5px 0;  /* 상하 5px, 좌우 0 */
+    margin-left: 0;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 st.markdown("<div class='app-title'>TradeVibes</div>", unsafe_allow_html=True)
 
