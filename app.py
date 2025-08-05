@@ -80,7 +80,7 @@ def calculate_adx(df, period=14):
     adx = dx.ewm(alpha=1/period, adjust=False).mean()
     return adx
 
-# 점수 함수: 터틀 전략 + 보조지표 결합
+# 점수 함수: 터틀 전략 + 보조지표 결합 (ADX 제거 버전)
 
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
@@ -93,7 +93,6 @@ def score_turtle_enhanced(df):
     df['RSI']      = calculate_rsi(df['Close'], 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
-    df['ADX']      = calculate_adx(df, 14)
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
     last = df.iloc[-1]
@@ -104,11 +103,10 @@ def score_turtle_enhanced(df):
     rsi         = last['RSI']
     bbw         = last['BB_width']
     bbw_mean    = last['BB_width_mean']
-    adx_val     = last['ADX']
     vol         = last['Volume']
     vol_mean    = last['Vol_mean']
 
-    if any(pd.isna(x) for x in [high20, low10, atr_val, rsi, bbw, bbw_mean, adx_val, vol_mean]):
+    if any(pd.isna(x) for x in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]):
         return 0, "필요한 기술 지표 데이터가 부족합니다."
 
     score = 0
@@ -123,9 +121,6 @@ def score_turtle_enhanced(df):
     # 볼린저 밴드 스퀴즈 탈출
     if bbw < bbw_mean * 0.8 and close > df['BB_upper'].iloc[-2]:
         score += 15; msgs.append("BB 수축 후 상단 돌파")
-    # ADX 추세 필터
-    if adx_val > 20:
-        score += 10; msgs.append(f"ADX({adx_val:.1f}) 강세 추세")
     # 거래량 필터
     if vol > vol_mean * 1.2:
         score += 15; msgs.append("거래량 증가")
