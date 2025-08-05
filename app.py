@@ -1,169 +1,151 @@
 # app.py
 import streamlit as st
-import yfinance as yf
 import pandas as pd
+import yfinance as yf
 import numpy as np
 
-# 기술 지표 계산 함수들 ---------------------------------------
-
+# --------------------- 기술 지표 계산 함수 ---------------------
 def calculate_rsi(data, period=14):
     delta = data['Close'].diff()
-    gain = delta.where(delta > 0, 0.0)
-    loss = -delta.where(delta < 0, 0.0)
-    avg_gain = gain.rolling(period).mean()
-    avg_loss = loss.rolling(period).mean()
+    gain = np.where(delta > 0, delta, 0)
+    loss = np.where(delta < 0, -delta, 0)
+    avg_gain = pd.Series(gain).rolling(window=period).mean()
+    avg_loss = pd.Series(loss).rolling(window=period).mean()
     rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
+    rsi = 100 - (100 / (1 + rs))
+    return pd.Series(rsi, index=data.index)
+
+def calculate_macd(data):
+    ema12 = data['Close'].ewm(span=12, adjust=False).mean()
+    ema26 = data['Close'].ewm(span=26, adjust=False).mean()
+    macd = ema12 - ema26
+    signal = macd.ewm(span=9, adjust=False).mean()
+    return macd, signal
 
 def calculate_bollinger_bands(data, window=20):
-    sma = data['Close'].rolling(window).mean()
-    std = data['Close'].rolling(window).std()
+    sma = data['Close'].rolling(window=window).mean()
+    std = data['Close'].rolling(window=window).std()
     upper_band = sma + (2 * std)
     lower_band = sma - (2 * std)
     return upper_band, lower_band
 
-def calculate_macd(data):
-    exp1 = data['Close'].ewm(span=12, adjust=False).mean()
-    exp2 = data['Close'].ewm(span=26, adjust=False).mean()
-    macd = exp1 - exp2
-    signal = macd.ewm(span=9, adjust=False).mean()
-    return macd, signal
+def calculate_atr(data, period=14):
+    high_low = data['High'] - data['Low']
+    high_close = np.abs(data['High'] - data['Close'].shift())
+    low_close = np.abs(data['Low'] - data['Close'].shift())
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = tr.rolling(period).mean()
+    return atr
 
-def calculate_adx(df, period=14):
-    df = df.copy()
-    high = df['High']
-    low = df['Low']
-    close = df['Close']
+def calculate_adx(data, period=14):
+    df = data.copy()
+    df['TR'] = np.maximum(df['High'] - df['Low'],
+                          np.maximum(abs(df['High'] - df['Close'].shift()), abs(df['Low'] - df['Close'].shift())))
+    df['+DM'] = np.where((df['High'] - df['High'].shift()) > (df['Low'].shift() - df['Low']),
+                         np.maximum(df['High'] - df['High'].shift(), 0), 0)
+    df['-DM'] = np.where((df['Low'].shift() - df['Low']) > (df['High'] - df['High'].shift()),
+                         np.maximum(df['Low'].shift() - df['Low'], 0), 0)
 
-    plus_dm = high.diff()
-    minus_dm = low.diff().abs()
+    tr_smooth = df['TR'].rolling(window=period).mean()
+    plus_dm_smooth = df['+DM'].rolling(window=period).mean()
+    minus_dm_smooth = df['-DM'].rolling(window=period).mean()
 
-    plus_dm_adj = np.where((plus_dm > minus_dm) & (plus_dm > 0), plus_dm, 0).astype(float).flatten()
-    minus_dm_adj = np.where((minus_dm > plus_dm) & (minus_dm > 0), minus_dm, 0).astype(float).flatten()
-
-    tr1 = high - low
-    tr2 = abs(high - close.shift())
-    tr3 = abs(low - close.shift())
-    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-
-    atr = tr.rolling(window=period).mean()
-    atr = atr.replace(0, np.nan)
-
-    plus_di = 100 * (pd.Series(plus_dm_adj, index=df.index).rolling(period).mean() / atr)
-    minus_di = 100 * (pd.Series(minus_dm_adj, index=df.index).rolling(period).mean() / atr)
-
+    plus_di = 100 * (plus_dm_smooth / tr_smooth)
+    minus_di = 100 * (minus_dm_smooth / tr_smooth)
     dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
     adx = dx.rolling(window=period).mean()
-
     return adx
 
-# 전략 점수 함수들 ---------------------------------------
-
-def score_day_trading(df):
-    rsi = calculate_rsi(df)
-    macd, signal = calculate_macd(df)
-    score = 0
-    reason = []
-
-    if rsi.iloc[-1] < 30:
-        score += 20
-        reason.append("RSI 과매도")
-
-    if macd.iloc[-1] > signal.iloc[-1]:
-        score += 20
-        reason.append("MACD 골든크로스")
-
-    if df['Volume'].iloc[-1] > df['Volume'].rolling(20).mean().iloc[-1]:
-        score += 10
-        reason.append("거래량 증가")
-
-    entry = df['Close'].iloc[-1]
-    target = round(entry * 1.015, 2)
-    stop = round(entry * 0.985, 2)
-
-    return score, ", ".join(reason), entry, target, stop
-
-
+# --------------------- 전략 점수 계산 함수 ---------------------
 def score_swing_trading(df):
-    upper, lower = calculate_bollinger_bands(df)
-    adx = calculate_adx(df)
-    score = 0
-    reason = []
+    try:
+        df['RSI'] = calculate_rsi(df)
+        df['MACD'], df['Signal'] = calculate_macd(df)
+        df['Upper'], df['Lower'] = calculate_bollinger_bands(df)
+        df['ADX'] = calculate_adx(df)
+        
+        latest = df.iloc[-1]
+        score = 0
+        reasons = []
 
-    if df['Close'].iloc[-1] < lower.iloc[-1]:
-        score += 25
-        reason.append("볼린저 밴드 하단 근접")
+        if latest['RSI'] < 30:
+            score += 20
+            reasons.append('RSI 과매도')
+        if latest['MACD'] > latest['Signal']:
+            score += 20
+            reasons.append('MACD 골든크로스')
+        if latest['Close'] < latest['Lower']:
+            score += 20
+            reasons.append('볼린저 밴드 하단 이탈')
+        if latest['ADX'] > 25:
+            score += 20
+            reasons.append(f'ADX({latest["ADX"]:.1f}) 강한 추세')
 
-    if adx.iloc[-1] > 25:
-        score += 25
-        reason.append(f"강한 추세 (ADX: {adx.iloc[-1]:.1f})")
+        entry = latest['Close']
+        atr = calculate_atr(df).iloc[-1]
+        target = entry + atr * 1.5
+        stop = entry - atr
 
-    entry = df['Close'].iloc[-1]
-    target = round(entry * 1.07, 2)
-    stop = round(entry * 0.95, 2)
+        return score, ", ".join(reasons), entry, target, stop
 
-    return score, ", ".join(reason), entry, target, stop
-
+    except Exception as e:
+        return 0, f"분석 실패: {e}", None, None, None
 
 def score_position_trading(df):
-    ma30 = df['Close'].rolling(window=30).mean()
-    ma150 = df['Close'].rolling(window=150).mean()
-    ma200 = df['Close'].rolling(window=200).mean()
-    volume_ma = df['Volume'].rolling(window=50).mean()
+    try:
+        df['SMA_150'] = df['Close'].rolling(window=150).mean()
+        df['SMA_200'] = df['Close'].rolling(window=200).mean()
+        df['Volume_MA_50'] = df['Volume'].rolling(window=50).mean()
 
-    score = 0
-    reason = []
+        latest = df.iloc[-1]
+        score = 0
+        reasons = []
 
-    if df['Close'].iloc[-1] > ma150.iloc[-1] and df['Close'].iloc[-1] > ma200.iloc[-1]:
-        score += 25
-        reason.append("주가가 MA150 및 MA200 위에 위치")
+        if latest['Close'] > latest['SMA_150'] > latest['SMA_200']:
+            score += 30
+            reasons.append('장기 상승 추세 유지')
+        if df['SMA_150'].iloc[-1] > df['SMA_150'].iloc[-20]:
+            score += 20
+            reasons.append('150일선 상승 중')
+        if latest['Volume'] > latest['Volume_MA_50']:
+            score += 10
+            reasons.append('거래량 증가')
 
-    if ma150.iloc[-1] > ma200.iloc[-1]:
-        score += 25
-        reason.append("MA150 > MA200 (우상향)")
+        entry = latest['Close']
+        atr = calculate_atr(df).iloc[-1]
+        target = entry + atr * 2
+        stop = entry - atr * 1.2
 
-    if ma30.iloc[-1] > ma150.iloc[-1] and ma30.iloc[-1] > ma200.iloc[-1]:
-        score += 25
-        reason.append("MA30 > MA150/MA200 (단기 상승세)")
+        return score, ", ".join(reasons), entry, target, stop
 
-    if df['Volume'].iloc[-1] > volume_ma.iloc[-1]:
-        score += 15
-        reason.append("거래량 평균 초과")
+    except Exception as e:
+        return 0, f"분석 실패: {e}", None, None, None
 
-    entry = df['Close'].iloc[-1]
-    target = round(entry * 1.25, 2)
-    stop = round(entry * 0.88, 2)
+# --------------------- Streamlit UI ---------------------
+st.set_page_config(page_title="📈 매매 신호 분석기")
+st.title("📊 주식 자동 매매 전략 점수 분석기")
 
-    return score, ", ".join(reason), entry, target, stop
-
-# UI ------------------------------------------------------
-
-st.title("📈 주식 매수 시그널 분석기")
-
-ticker = st.text_input("티커를 입력하세요 (예: AAPL, TSLA, KULR 등)", value="KULR")
-strategy = st.selectbox("트레이딩 전략 선택", ["Day Trading", "Swing Trading", "Position Trading"])
+symbol = st.text_input("티커를 입력하세요 (예: AAPL, TSLA, KRX:005930):", value="AAPL")
+option = st.selectbox("전략 선택", ["스윙 트레이딩", "포지션 트레이딩"])
 
 if st.button("분석 시작"):
-    df = yf.download(ticker, period="1y", interval="1d")
-
+    df = yf.download(symbol, period="1y")
     if df.empty:
-        st.error("유효한 티커를 입력하세요.")
+        st.error("데이터를 불러오지 못했습니다. 올바른 티커인지 확인해주세요.")
     else:
-        st.subheader(f"{strategy} 분석 결과")
+        if option == "스윙 트레이딩":
+            score, reasons, entry, target, stop = score_swing_trading(df)
+        elif option == "포지션 트레이딩":
+            score, reasons, entry, target, stop = score_position_trading(df)
 
-        if strategy == "Day Trading":
-            score, reason, entry, target, stop = score_day_trading(df)
-        elif strategy == "Swing Trading":
-            score, reason, entry, target, stop = score_swing_trading(df)
-        else:
-            score, reason, entry, target, stop = score_position_trading(df)
+        st.subheader(f"✅ 점수: {score} / 100")
+        st.write(f"📌 분석 근거: {reasons}")
 
-        st.write(f"📊 **점수: {score} / 100**")
-        st.write(f"📌 **분석 근거:** {reason}")
-        st.markdown(f"""
-        💡 **자동 계산 진입/청산가**  
-        - 진입가: `{entry}`  
-        - 목표가: `{target}`  
-        - 손절가: `{stop}`
-        """)
+        if entry and target and stop:
+            st.markdown("""
+            💡 **자동 계산 진입/청산가:**
+            - 진입가: {:.2f}  
+            - 목표가: {:.2f}  
+            - 손절가: {:.2f}  
+            """.format(entry, target, stop))
 
