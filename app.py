@@ -3,12 +3,10 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 
-st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
-
 st.markdown("""
 <style>
-/* 배경색 전체 검정 */
-body, .main {
+/* 배경색 전체 검정 - html, body, main 및 데스크톱 주요 컨테이너 */
+html, body, .main, .css-1d391kg, .css-12oz5g7, .css-18e3th9 {
     background-color: #121212 !important;
     color: #e0e0e0 !important;
 }
@@ -77,6 +75,7 @@ p, span, div, h1, h2, h3, h4, h5, h6 {
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # 지표 계산 함수들 (기존 함수 재활용)
