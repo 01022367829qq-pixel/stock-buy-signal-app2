@@ -8,7 +8,7 @@ st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 st.markdown("""
 <style>
 .app-title {
-    font-size: 28px;
+    font-size: 50px;
     font-weight: bold;
     color: #4CAF50;
     text-align: left;
