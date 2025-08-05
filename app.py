@@ -93,7 +93,7 @@ def score_turtle_enhanced(df):
     df['RSI']      = calculate_rsi(df['Close'], 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
-    df['ADX']      = calculate_adx(df, 14)
+    df['ADX']      = list(calculate_adx(df, 14))
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
     last = df.iloc[-1]
