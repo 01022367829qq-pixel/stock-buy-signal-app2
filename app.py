@@ -3,7 +3,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 
-st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
+st.set_page_config(page_title="📈 매수 타점 포착기", layout="wide")
 
 # 스타일 설정
 st.markdown("""
