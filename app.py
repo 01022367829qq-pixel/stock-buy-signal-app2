@@ -6,31 +6,31 @@ import numpy as np
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
 st.markdown("""
+st.markdown("""
 <style>
+/* 배경색 전체 검정 */
+body, .main {
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
+}
+
+/* 앱 제목 */
 .app-title {
     font-size: 40px;
     font-weight: bold;
-    color: #4CAF50;
+    color: #90caf9;  /* 연한 파란색 */
     text-align: left;
-    padding: 5px 0 5px 0;  /* 상하 5px, 좌우 0 */
+    padding: 5px 0 5px 0;
     margin-left: 0;
-    margin-top: -70px;  /* 위로 10px 올림 */
+    margin-top: -70px;
 }
-</style>
-""", unsafe_allow_html=True)
 
-
-st.markdown("<div class='app-title'>TradeVibes</div>", unsafe_allow_html=True)
-
-
-# 스타일 설정
-st.markdown("""
-<style>
+/* 카드 스타일 */
 .card {
-    background-color: #f9f9f9;
+    background-color: #1e1e1e;
     padding: 20px;
     border-radius: 15px;
-    box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
     text-align: center;
     transition: transform 0.2s;
     height: 100%;
@@ -38,24 +38,47 @@ st.markdown("""
 }
 .card:hover {
     transform: scale(1.02);
-    background-color: #e8f5e9;
+    background-color: #333333;
 }
+
+/* 카드 제목 */
 .card-title {
     font-size: 20px;
     font-weight: bold;
-    color: #2e7d32;
+    color: #81d4fa;  /* 밝은 하늘색 */
     margin-bottom: 10px;
 }
+
+/* 카드 설명 텍스트 */
 .card-desc {
     font-size: 14px;
-    color: #555;
+    color: #bbbbbb;
     margin-bottom: 15px;
 }
+
+/* 입력창 텍스트 중앙정렬 */
 input {
     text-align: center;
+    background-color: #2c2c2c !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #444444 !important;
+    border-radius: 5px;
+}
+
+/* 버튼 텍스트 색상 */
+.stButton>button {
+    background-color: #1976d2;
+    color: white;
+    border-radius: 5px;
+}
+
+/* 기타 텍스트 색상 */
+p, span, div, h1, h2, h3, h4, h5, h6 {
+    color: #e0e0e0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # 지표 계산 함수들 (기존 함수 재활용)
 def calculate_rsi(series, period=14):
