@@ -48,7 +48,7 @@ def calculate_atr(df, period=14):
     atr = tr.rolling(period).mean()
     return atr
 
-# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용) - NaN 체크 반영
+# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용) - NaN 체크 수정
 def score_turtle_day_trading(df):
     if df.empty or len(df) < 30:
         return 0, "데이터가 충분하지 않습니다."
@@ -63,10 +63,17 @@ def score_turtle_day_trading(df):
     score = 0
     messages = []
 
-    # NaN 체크
     high_20d = last['20d_high']
     low_10d = last['10d_low']
-    if pd.isna(high_20d) or pd.isna(low_10d) or pd.isna(last['ATR']):
+    atr_val = last['ATR']
+
+    # NaN 및 None 체크 안전하게 처리
+    if any([
+        high_20d is None, low_10d is None, atr_val is None,
+        (isinstance(high_20d, float) and np.isnan(high_20d)),
+        (isinstance(low_10d, float) and np.isnan(low_10d)),
+        (isinstance(atr_val, float) and np.isnan(atr_val))
+    ]):
         return 0, "필요한 기술 지표 데이터가 부족합니다."
 
     # 1) 20일 고점 돌파 - 매수 신호
