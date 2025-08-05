@@ -291,7 +291,13 @@ col1, col2, col3 = st.columns(3)
 with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
+        st.markdown("""
+<div class='card-title'>
+  1️⃣ 데이 트레이딩
+  <span style="cursor: help;" title="Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다.">ⓘ</span>
+</div>
+""", unsafe_allow_html=True)
+
         st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, BB, ATR, 거래량 지표 결합</div>", unsafe_allow_html=True)
         ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
         if st.button("🔍 분석", key="btn_dt"):
