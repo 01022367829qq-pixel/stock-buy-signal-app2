@@ -48,7 +48,7 @@ def calculate_atr(df, period=14):
     atr = tr.rolling(period).mean()
     return atr
 
-# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용)
+# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용) - NaN 체크 반영
 def score_turtle_day_trading(df):
     if df.empty or len(df) < 30:
         return 0, "데이터가 충분하지 않습니다."
@@ -59,17 +59,23 @@ def score_turtle_day_trading(df):
     df['ATR'] = calculate_atr(df, 14)
     
     last = df.iloc[-1]
-    
+
     score = 0
     messages = []
 
+    # NaN 체크
+    high_20d = last['20d_high']
+    low_10d = last['10d_low']
+    if pd.isna(high_20d) or pd.isna(low_10d) or pd.isna(last['ATR']):
+        return 0, "필요한 기술 지표 데이터가 부족합니다."
+
     # 1) 20일 고점 돌파 - 매수 신호
-    if last['Close'] > last['20d_high']:
+    if last['Close'] > high_20d:
         score += 50
         messages.append("20일 최고가 돌파: 매수 신호 강함")
 
     # 2) 10일 저점 이탈 - 위험 신호 (점수 감점)
-    if last['Close'] < last['10d_low']:
+    if last['Close'] < low_10d:
         score -= 30
         messages.append("10일 최저가 이탈: 위험 신호")
 
