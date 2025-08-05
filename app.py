@@ -5,8 +5,8 @@ import numpy as np
 
 st.markdown("""
 <style>
-/* 배경색 전체 검정 - html, body, main 및 데스크톱 주요 컨테이너 */
-html, body, .main, .css-1d391kg, .css-12oz5g7, .css-18e3th9 {
+/* 최상위 html, body, Streamlit 내부 여러 컨테이너 모두 배경, 글자색 강제 적용 */
+html, body, [class^="css"], .main, section, div[data-testid="stAppViewContainer"] {
     background-color: #121212 !important;
     color: #e0e0e0 !important;
 }
@@ -15,7 +15,7 @@ html, body, .main, .css-1d391kg, .css-12oz5g7, .css-18e3th9 {
 .app-title {
     font-size: 40px;
     font-weight: bold;
-    color: #90caf9;  /* 연한 파란색 */
+    color: #90caf9;
     text-align: left;
     padding: 5px 0 5px 0;
     margin-left: 0;
@@ -24,7 +24,7 @@ html, body, .main, .css-1d391kg, .css-12oz5g7, .css-18e3th9 {
 
 /* 카드 스타일 */
 .card {
-    background-color: #1e1e1e;
+    background-color: #1e1e1e !important;
     padding: 20px;
     border-radius: 15px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
@@ -35,14 +35,14 @@ html, body, .main, .css-1d391kg, .css-12oz5g7, .css-18e3th9 {
 }
 .card:hover {
     transform: scale(1.02);
-    background-color: #333333;
+    background-color: #333333 !important;
 }
 
 /* 카드 제목 */
 .card-title {
     font-size: 20px;
     font-weight: bold;
-    color: #81d4fa;  /* 밝은 하늘색 */
+    color: #81d4fa;
     margin-bottom: 10px;
 }
 
@@ -64,8 +64,8 @@ input {
 
 /* 버튼 텍스트 색상 */
 .stButton>button {
-    background-color: #1976d2;
-    color: white;
+    background-color: #1976d2 !important;
+    color: white !important;
     border-radius: 5px;
 }
 
@@ -75,7 +75,6 @@ p, span, div, h1, h2, h3, h4, h5, h6 {
 }
 </style>
 """, unsafe_allow_html=True)
-
 
 
 # 지표 계산 함수들 (기존 함수 재활용)
