@@ -39,7 +39,7 @@ input {
 </style>
 """, unsafe_allow_html=True)
 
-# 보조지표 계산 함수들
+# 보조지표 함수들
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -154,7 +154,7 @@ def score_turtle_enhanced(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량)
+# 스윙 트레이딩 점수 함수
 def score_swing_trading(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -202,37 +202,84 @@ def score_swing_trading(df):
 
     entry_price = close
     atr_val = calculate_atr(df, 14).iloc[-1] if not df.empty else 0
+
+    # ADX에 따른 손절/목표가 설정 (강한 추세면 타이트하게, 약한 추세면 넉넉하게)
     if adx >= 25:
         target_price = close + atr_val * 1.5
         stop_loss = close - atr_val * 1.0
     else:
-        target_price = close + atr_val * 1.0
-        stop_loss = close - atr_val * 0.5
+        target_price = close + atr_val * 3.0
+        stop_loss = close - atr_val * 2.0
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# UI 렌더링
-st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
+# 메인 UI
 
-ticker_input = st.text_input("종목 티커를 입력하세요 (예: AAPL, KULR)", value="AAPL").upper()
-timeframe = st.selectbox("트레이딩 유형 선택", ["데이 트레이딩", "스윙 트레이딩"])
+st.title("📈 매수 타점 분석기")
 
-if ticker_input:
-    df = yf.download(ticker_input, period="3mo", interval="1d")
-    if df.empty:
-        st.error("해당 종목 데이터가 없습니다. 티커를 다시 확인해주세요.")
-    else:
-        if timeframe == "데이 트레이딩":
-            score, msg, entry, target, stop = score_turtle_enhanced(df)
-        else:
-            score, msg, entry, target, stop = score_swing_trading(df)
+with st.expander("5가지 주요 트레이딩 전략", expanded=True):
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">터틀 트레이딩 (Turtle Trading)</div>
+            <div class="card-desc">20일 최고가 돌파 전략 기반, 추세 추종형</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">RSI 기반 과매도 전략</div>
+            <div class="card-desc">RSI 지표로 과매도 구간 매수 포착</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">볼린저 밴드 수축 돌파</div>
+            <div class="card-desc">볼린저 밴드 폭 축소 후 상향 돌파 탐색</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col4:
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">ADX 추세 강도 활용</div>
+            <div class="card-desc">ADX로 추세 강도 확인 후 진입 결정</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col5:
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">거래량 급증 탐지</div>
+            <div class="card-desc">평균 대비 거래량 급증 시 주목</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown(f"### 분석 결과: {ticker_input} ({timeframe})")
-        st.markdown(f"**점수: {score} / 100**")
-        st.markdown(f"**상태 메시지:** {msg}")
-        if entry and target and stop:
-            st.markdown(f"💡 자동 계산 진입/청산가:")
-            st.markdown(f"- 진입가: {entry:.2f}")
-            st.markdown(f"- 목표가: {target:.2f}")
-            st.markdown(f"- 손절가: {stop:.2f}")
+st.write("---")
+
+ticker_input = st.text_input("티커를 입력하세요 (예: AAPL, TSLA)", value="KULR")
+
+# 데이터 가져오기
+try:
+    df_daily = yf.download(ticker_input, period="3mo", interval="1d")
+    df_1h = yf.download(ticker_input, period="30d", interval="60m")
+except Exception as e:
+    st.error(f"데이터를 불러오는 중 오류 발생: {e}")
+    st.stop()
+
+if df_daily.empty or df_1h.empty:
+    st.warning("데이터가 충분하지 않습니다. 티커 및 기간을 확인해주세요.")
+else:
+    st.subheader("데이 트레이딩 점수 및 분석 (1시간봉)")
+    score_day, msg_day, entry_day, target_day, stop_day = score_turtle_enhanced(df_1h)
+    st.write(f"점수: {score_day} / 100")
+    st.write(f"분석: {msg_day}")
+    if entry_day:
+        st.write(f"진입가: {entry_day:.2f}, 목표가: {target_day:.2f}, 손절가: {stop_day:.2f}")
+
+    st.subheader("스윙 트레이딩 점수 및 분석 (일봉)")
+    score_swing, msg_swing, entry_swing, target_swing, stop_swing = score_swing_trading(df_daily)
+    st.write(f"점수: {score_swing} / 100")
+    st.write(f"분석: {msg_swing}")
+    if entry_swing:
+        st.write(f"진입가: {entry_swing:.2f}, 목표가: {target_swing:.2f}, 손절가: {stop_swing:.2f}")
