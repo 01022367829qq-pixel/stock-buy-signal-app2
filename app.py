@@ -447,9 +447,12 @@ with col5:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Made by Son Jiwan | Powered by Streamlit</p>", unsafe_allow_html=True)
-st.markdown("""
-<hr style="margin-top: 50px; margin-bottom: 10px;">
-<div style='text-align: center; font-size: 14px; color: #888;'>
-📩 피드백은 인스타그램 <a href='https://instagram.com/your_username' target='_blank' style='color: #90caf9;'>@trade_vibes.kr</a> 로 보내주세요!
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div style='text-align: center; margin-top: 50px; font-size: 14px; color: #bbbbbb;'>
+        💬 피드백은 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color: #90caf9; text-decoration: none;">
+        @trade_vibes.kr</a> 로 남겨주세요.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
