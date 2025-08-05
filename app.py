@@ -67,12 +67,18 @@ def calculate_atr(df, period=14):
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     return tr.rolling(period).mean()
 
-# 점수 함수: 터틀 전략 + 보조지표 결합
 
+# 점수 함수: 터틀 전략 + 보조지표 결합
 def score_turtle_enhanced(df):
-    # 데이터 충분성 체크
+    # 기본 체크
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다."
+
+    # 필요한 컬럼 존재 여부 확인
+    required_cols = ['Close', 'High', 'Low', 'Volume']
+    for col in required_cols:
+        if col not in df.columns or df[col].empty:
+            return 0, f"{col} 데이터가 누락되었습니다."
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
@@ -83,17 +89,20 @@ def score_turtle_enhanced(df):
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-    close = df['Close'].iat[-1]
-    high20 = df['20d_high'].iat[-1]
-    low10 = df['10d_low'].iat[-1]
-    atr_val = df['ATR'].iat[-1]
-    rsi = df['RSI'].iat[-1]
-    bbw = df['BB_width'].iat[-1]
-    bbw_mean = df['BB_width_mean'].iat[-1]
-    vol = df['Volume'].iat[-1]
-    vol_mean = df['Vol_mean'].iat[-1]
+    # 마지막 값 추출
+    try:
+        close = df['Close'].iat[-1]
+        high20 = df['20d_high'].iat[-1]
+        low10 = df['10d_low'].iat[-1]
+        atr_val = df['ATR'].iat[-1]
+        rsi = df['RSI'].iat[-1]
+        bbw = df['BB_width'].iat[-1]
+        bbw_mean = df['BB_width_mean'].iat[-1]
+        vol = df['Volume'].iat[-1]
+        vol_mean = df['Vol_mean'].iat[-1]
+    except Exception:
+        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"
 
-    # NaN 또는 None 체크
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
             return 0, "필요한 기술 지표 데이터가 부족합니다."
@@ -101,30 +110,25 @@ def score_turtle_enhanced(df):
     score = 0
     msgs = []
 
-    # 터틀 돌파
+    # 점수 기준
     if close > high20:
         score += 30
         msgs.append("20일 최고가 돌파")
-    # RSI 필터
     if rsi < 50:
         score += 10
         msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
-    # 볼린저 밴드 스퀴즈 탈출
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
     if bbw is not None and bbw_mean is not None and prev_upper is not None:
         if bbw < bbw_mean * 0.8 and close > prev_upper:
             score += 15
             msgs.append("BB 수축 후 상단 돌파")
-    # 거래량 필터
     if vol > vol_mean * 1.2:
         score += 15
         msgs.append("거래량 증가")
-    # ATR 모멘텀
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
     if atr_val > atr_mean:
         score += 20
         msgs.append("ATR 증가")
-    # 위험 구간 패널티
     if close < low10:
         score -= 20
         msgs.append("10일 최저가 이탈 위험")
@@ -133,6 +137,7 @@ def score_turtle_enhanced(df):
     if not msgs:
         msgs = ["신호 없음"]
     return score, "; ".join(msgs)
+
 
 # UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
@@ -151,8 +156,7 @@ with col1:
             if not ticker.strip():
                 st.warning("티커를 입력하세요.")
             else:
-                # ✅ 수정된 부분: 3mo → 6mo
-                df = yf.download(ticker, period="6mo", interval="1d")
+                df = yf.download(ticker, period="3mo", interval="1d")
                 if df.empty:
                     st.error("데이터를 불러올 수 없습니다.")
                 else:
