@@ -1,4 +1,7 @@
 import streamlit as st
+import yfinance as yf
+import pandas as pd
+import numpy as np
 
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
@@ -36,6 +39,54 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ATR 계산 함수
+def calculate_atr(df, period=14):
+    high_low = df['High'] - df['Low']
+    high_close = np.abs(df['High'] - df['Close'].shift())
+    low_close = np.abs(df['Low'] - df['Close'].shift())
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = tr.rolling(period).mean()
+    return atr
+
+# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용)
+def score_turtle_day_trading(df):
+    if df.empty or len(df) < 30:
+        return 0, "데이터가 충분하지 않습니다."
+
+    df = df.copy()
+    df['20d_high'] = df['High'].rolling(window=20).max().shift(1)  # 전일 기준 20일 최고가
+    df['10d_low'] = df['Low'].rolling(window=10).min().shift(1)    # 전일 기준 10일 최저가
+    df['ATR'] = calculate_atr(df, 14)
+    
+    last = df.iloc[-1]
+    
+    score = 0
+    messages = []
+
+    # 1) 20일 고점 돌파 - 매수 신호
+    if last['Close'] > last['20d_high']:
+        score += 50
+        messages.append("20일 최고가 돌파: 매수 신호 강함")
+
+    # 2) 10일 저점 이탈 - 위험 신호 (점수 감점)
+    if last['Close'] < last['10d_low']:
+        score -= 30
+        messages.append("10일 최저가 이탈: 위험 신호")
+
+    # 3) ATR 기반 변동성 확인 - 변동성 높으면 점수 증가
+    atr_mean = df['ATR'].rolling(window=30).mean().iloc[-1]
+    if last['ATR'] > atr_mean:
+        score += 30
+        messages.append("ATR 증가: 변동성 높음")
+
+    # 점수 0~100 제한
+    score = max(0, min(100, score))
+
+    if len(messages) == 0:
+        messages.append("신호 없음 - 관망 권장")
+
+    return score, "; ".join(messages)
+
 # 제목
 st.markdown("<h1 style='text-align: center; color: #4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
@@ -51,7 +102,16 @@ with col1:
         st.markdown("<div class='card-desc'>당일 매수/매도, 고변동성 단타 매매. 수 분~수 시간 보유.</div>", unsafe_allow_html=True)
         ticker1 = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker1")
         if st.button("🔍 분석", key="btn1"):
-            st.success(f"{ticker1} (데이 트레이딩) 분석 준비 중...")
+            if ticker1.strip() == "":
+                st.warning("티커를 입력하세요.")
+            else:
+                df = yf.download(ticker1, period="3mo", interval="1d")
+                if df.empty:
+                    st.error("데이터를 불러올 수 없습니다.")
+                else:
+                    score, msg = score_turtle_day_trading(df)
+                    st.success(f"점수: {score} / 100")
+                    st.info(msg)
         st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
