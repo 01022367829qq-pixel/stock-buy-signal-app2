@@ -5,6 +5,21 @@ import numpy as np
 
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
+st.markdown("""
+<style>
+.app-title {
+    font-size: 28px;
+    font-weight: bold;
+    color: #4CAF50;
+    text-align: left;
+    padding: 10px 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("<div class='app-title'>TradeVibes</div>", unsafe_allow_html=True)
+
+
 # 스타일 설정
 st.markdown("""
 <style>
