@@ -50,6 +50,7 @@ def calculate_rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
+
 def calculate_bollinger(series, window=20, num_std=2):
     ma = series.rolling(window).mean()
     std = series.rolling(window).std()
@@ -57,6 +58,7 @@ def calculate_bollinger(series, window=20, num_std=2):
     lower = ma - num_std * std
     width = upper - lower
     return upper, lower, width
+
 
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
@@ -68,7 +70,6 @@ def calculate_atr(df, period=14):
 # 점수 함수: 터틀 전략 + 보조지표 결합
 
 def score_turtle_enhanced(df):
-    # 데이터 충분성 체크
     if df is None or df.empty or len(df) < 60:
         return 0, f"데이터가 충분하지 않습니다. 행 개수: {len(df) if df is not None else 'None'}"
 
@@ -81,25 +82,20 @@ def score_turtle_enhanced(df):
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-    # dropna 후 데이터 체크 및 디버깅 출력
     df = df.dropna().reset_index(drop=True)
-    st.write("📊 Dropna 후 데이터 (마지막 5개):", df.tail())
-    st.write("📏 Dropna 후 남은 행 수:", len(df))
     if len(df) == 0:
         return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"
 
-    # 마지막 스칼라 값 추출
-    close = df['Close'].iat[-1]
-    high20 = df['20d_high'].iat[-1]
-    low10 = df['10d_low'].iat[-1]
-    atr_val = df['ATR'].iat[-1]
-    rsi = df['RSI'].iat[-1]
-    bbw = df['BB_width'].iat[-1]
-    bbw_mean = df['BB_width_mean'].iat[-1]
-    vol = df['Volume'].iat[-1]
-    vol_mean = df['Vol_mean'].iat[-1]
+    close = df['Close'].iloc[-1]
+    high20 = df['20d_high'].iloc[-1]
+    low10 = df['10d_low'].iloc[-1]
+    atr_val = df['ATR'].iloc[-1]
+    rsi = df['RSI'].iloc[-1]
+    bbw = df['BB_width'].iloc[-1]
+    bbw_mean = df['BB_width_mean'].iloc[-1]
+    vol = df['Volume'].iloc[-1]
+    vol_mean = df['Vol_mean'].iloc[-1]
 
-    # NaN 또는 None 체크
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
             return 0, "필요한 기술 지표 데이터가 부족합니다."
@@ -107,30 +103,28 @@ def score_turtle_enhanced(df):
     score = 0
     msgs = []
 
-    # 터틀 돌파
     if close > high20:
         score += 30
         msgs.append("20일 최고가 돌파")
-    # RSI 필터
     if rsi < 50:
         score += 10
         msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
-    # 볼린저 밴드 스퀴즈 탈출
+
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
     if bbw is not None and bbw_mean is not None and prev_upper is not None:
         if bbw < bbw_mean * 0.8 and close > prev_upper:
             score += 15
             msgs.append("BB 수축 후 상단 돌파")
-    # 거래량 필터
+
     if vol > vol_mean * 1.2:
         score += 15
         msgs.append("거래량 증가")
-    # ATR 모멘텀
+
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
     if atr_val > atr_mean:
         score += 20
         msgs.append("ATR 증가")
-    # 위험 구간 패널티
+
     if close < low10:
         score -= 20
         msgs.append("10일 최저가 이탈 위험")
@@ -157,7 +151,7 @@ with col1:
             if not ticker.strip():
                 st.warning("티커를 입력하세요.")
             else:
-                df = yf.download(ticker, period="6mo", interval="1d")
+                df = yf.download(ticker, period="3mo", interval="1d")
                 if df.empty:
                     st.error("데이터를 불러올 수 없습니다.")
                 else:
