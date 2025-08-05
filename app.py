@@ -68,23 +68,29 @@ def calculate_atr(df, period=14):
 
 
 def calculate_adx(df, period=14):
+    # +DM, -DM 계산
     up = df['High'].diff()
     down = df['Low'].diff().abs()
-    plus_dm = np.where((up > down) & (up > 0), up, 0.0)
-    minus_dm = np.where((down > up) & (down > 0), down, 0.0)
+    plus_dm = up.where((up > down) & (up > 0), 0.0)
+    minus_dm = down.where((down > up) & (down > 0), 0.0)
+    # ATR 계산
     atr = calculate_atr(df, period)
-    plus_di = 100 * (pd.Series(plus_dm).ewm(alpha=1/period).mean() / atr)
-    minus_di = 100 * (pd.Series(minus_dm).ewm(alpha=1/period).mean() / atr)
-    dx = (np.abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
-    return dx.ewm(alpha=1/period).mean()
+    # DI 및 DX 계산
+    plus_di = 100 * plus_dm.ewm(alpha=1/period, adjust=False).mean() / atr
+    minus_di = 100 * minus_dm.ewm(alpha=1/period, adjust=False).mean() / atr
+    dx = (plus_di - minus_di).abs() / (plus_di + minus_di) * 100
+    # ADX는 DX의 지수이동평균
+    adx = dx.ewm(alpha=1/period, adjust=False).mean()
+    return adx
 
 # 점수 함수: 터틀+보조지표 결합
+: 터틀+보조지표 결합
 
 def score_turtle_enhanced(df):
-    if df is None or df.empty or len(df) < 60:
-        return 0, "데이터가 충분하지 않습니다."
+   습니다."
     df = df.copy()
-    # 기본 돌파 및 변동성
+    # 기본 돌파 및 변동성 if df is None or df.empty or len(df) < 60:
+        return 0, "데이터가 충분하지 않
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
     df['10d_low'] = df['Low'].rolling(10).min().shift(1)
     df['ATR'] = calculate_atr(df, 14)
