@@ -120,3 +120,18 @@ st.markdown(
     "<p style='text-align: center; font-size: 13px; color: gray;'>Made by Son Jiwan | Powered by Streamlit</p>",
     unsafe_allow_html=True
 )
+/* 불필요한 기본 input 배경 제거 */
+input[type="text"] {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    height: 35px !important;
+    font-size: 16px !important;
+}
+
+/* 만약 여전히 흰 배경이 문제라면 완전 숨김 가능 (테스트용) */
+/*
+input[type="text"] {
+    display: none !important;
+}
+*/
