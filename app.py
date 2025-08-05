@@ -39,148 +39,147 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ATR 계산 함수
+# 지표 계산 함수들
+def calculate_rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
+
+
+def calculate_bollinger(series, window=20, num_std=2):
+    ma = series.rolling(window).mean()
+    std = series.rolling(window).std()
+    upper = ma + num_std * std
+    lower = ma - num_std * std
+    width = upper - lower
+    return upper, lower, width
+
+
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
     high_close = np.abs(df['High'] - df['Close'].shift(1))
     low_close = np.abs(df['Low'] - df['Close'].shift(1))
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    atr = tr.rolling(period).mean()
-    return atr
+    return tr.rolling(period).mean()
 
-# 터틀 트레이딩 변형 점수 함수 (데이 트레이딩용)
-def score_turtle_day_trading(df):
-    # 데이터 충분성 체크
-    if df is None or df.empty or len(df) < 30:
+
+def calculate_adx(df, period=14):
+    up = df['High'].diff()
+    down = df['Low'].diff().abs()
+    plus_dm = np.where((up > down) & (up > 0), up, 0.0)
+    minus_dm = np.where((down > up) & (down > 0), down, 0.0)
+    atr = calculate_atr(df, period)
+    plus_di = 100 * (pd.Series(plus_dm).ewm(alpha=1/period).mean() / atr)
+    minus_di = 100 * (pd.Series(minus_dm).ewm(alpha=1/period).mean() / atr)
+    dx = (np.abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+    return dx.ewm(alpha=1/period).mean()
+
+# 점수 함수: 터틀+보조지표 결합
+
+def score_turtle_enhanced(df):
+    if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다."
-
-    # 지표 계산
     df = df.copy()
-    df['20d_high'] = df['High'].rolling(window=20).max().shift(1)
-    df['10d_low']  = df['Low'].rolling(window=10).min().shift(1)
-    df['ATR']      = calculate_atr(df, 14)
+    # 기본 돌파 및 변동성
+    df['20d_high'] = df['High'].rolling(20).max().shift(1)
+    df['10d_low'] = df['Low'].rolling(10).min().shift(1)
+    df['ATR'] = calculate_atr(df, 14)
+    # 보조 지표
+    df['RSI'] = calculate_rsi(df['Close'], 14)
+    df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
+    df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
+    df['ADX'] = calculate_adx(df, 14)
 
-    # 마지막 값 추출 (스칼라)
-    close_last = df['Close'].iloc[-1]
-    high_20d   = df['20d_high'].iloc[-1]
-    low_10d    = df['10d_low'].iloc[-1]
-    atr_val    = df['ATR'].iloc[-1]
+    df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-    # NaN or None 체크
-    if any([high_20d is None, low_10d is None, atr_val is None,
-            (isinstance(high_20d, float) and np.isnan(high_20d)),
-            (isinstance(low_10d, float)  and np.isnan(low_10d)),
-            (isinstance(atr_val, float)  and np.isnan(atr_val))]):
+    # 마지막 값
+    last = df.iloc[-1]
+    close, high20, low10, atr, rsi, bbw, bbw_mean, adx, vol, vol_mean = (
+        last['Close'], last['20d_high'], last['10d_low'], last['ATR'],
+        last['RSI'], last['BB_width'], last['BB_width_mean'], last['ADX'],
+        last['Volume'], last['Vol_mean']
+    )
+    # NaN 체크
+    if any(pd.isna(x) for x in [high20, low10, atr, rsi, bbw, bbw_mean, adx, vol_mean]):
         return 0, "필요한 기술 지표 데이터가 부족합니다."
 
     score = 0
-    messages = []
+    msgs = []
+    # 터틀 돌파
+    if close > high20:
+        score += 30; msgs.append("20일 최고가 돌파")
+    # RSI 필터 (과매도 구간 진입)
+    if rsi < 50:
+        score += 10; msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
+    # 볼린저 스퀴즈 탈출
+    if bbw < bbw_mean * 0.8 and close > df['BB_upper'].iloc[-2]:
+        score += 15; msgs.append("BB 수축 후 상단 돌파")
+    # ADX 강세 추세
+    if adx > 20:
+        score += 10; msgs.append(f"ADX({adx:.1f}) 강세 추세")
+    # 거래량 증가
+    if vol > vol_mean * 1.2:
+        score += 15; msgs.append("거래량 증가")
+    # ATR 모멘텀
+    atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
+    if atr > atr_mean:
+        score += 20; msgs.append("ATR 증가")
+    # 위험 구간 패널티
+    if close < low10:
+        score -= 20; msgs.append("10일 최저가 이탈 위험")
 
-        # 매수 신호
-    try:
-        if float(close_last) > float(high_20d):
-            score += 50
-            messages.append("20일 최고가 돌파: 매수 신호 강함")
-    except Exception:
-        pass
-
-        # 위험 신호
-    try:
-        if float(close_last) < float(low_10d):
-            score -= 30
-            messages.append("10일 최저가 이탈: 위험 신호")
-    except Exception:
-        pass
-
-    # 변동성 증가 확인
-    atr_mean = df['ATR'].rolling(window=30).mean().iloc[-1]
-    if atr_val > atr_mean:
-        score += 30
-        messages.append("ATR 증가: 변동성 높음")
-
-    # 점수 한계 설정
     score = max(0, min(100, score))
-
-    if not messages:
-        messages.append("신호 없음 - 관망 권장")
-
-    return score, "; ".join(messages)
+    if not msgs: msgs = ["신호 없음"]
+    return score, "; ".join(msgs)
 
 # 제목
 st.markdown("<h1 style='text-align: center; color: #4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# 카드 묶음 1
 col1, col2, col3 = st.columns(3)
-
-# 데이 트레이딩 카드: 터틀 전략 변형 적용
 with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>20일 고점 돌파 + 위험 구간 이탈 + ATR 기반 점수 산정</div>", unsafe_allow_html=True)
-        ticker1 = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker1")
-        if st.button("🔍 분석", key="btn1"):
-            if not ticker1.strip():
-                st.warning("티커를 입력하세요.")
+        st.markdown("<div class='card-desc'>터틀+RSI+BB+ADX+거래량 필터 결합</div>", unsafe_allow_html=True)
+        ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
+        if st.button("🔍 분석", key="btn_dt"):
+            if not ticker.strip(): st.warning("티커를 입력하세요.")
             else:
-                df = yf.download(ticker1, period="3mo", interval="1d")
-                if df.empty:
-                    st.error("데이터를 불러올 수 없습니다.")
+                df = yf.download(ticker, period="3mo", interval="1d")
+                if df.empty: st.error("데이터를 불러올 수 없습니다.")
                 else:
-                    score, msg = score_turtle_day_trading(df)
+                    score, msg = score_turtle_enhanced(df)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
         st.markdown("</div>", unsafe_allow_html=True)
-
-# 스윙, 포지션 등 나머지 카드(기본 UI만)
 with col2:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>2️⃣ 스윙 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>며칠~몇 주 보유, 추세 추종 및 기술적 분석 기반.</div>", unsafe_allow_html=True)
-        ticker2 = st.text_input("", placeholder="티커 입력 (예: TSLA)", key="ticker2")
-        if st.button("🔍 분석", key="btn2"):
-            st.success(f"{ticker2} (스윙 트레이딩) 분석 준비 중...")
-        st.markdown("</div>", unsafe_allow_html=True)
-
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>2️⃣ 스윙 트레이딩</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 with col3:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>수 주~수년 보유, 업종 분석 및 장기 추세 중심.</div>", unsafe_allow_html=True)
-        ticker3 = st.text_input("", placeholder="티커 입력 (예: MSFT)", key="ticker3")
-        if st.button("🔍 분석", key="btn3"):
-            st.success(f"{ticker3} (포지션 트레이딩) 분석 준비 중...")
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# 카드 묶음 2
-col4, col5, _ = st.columns([1, 1, 1])
-
+col4, col5,_ = st.columns([1,1,1])
 with col4:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>초단타 전략. 수초~수분 보유. 빠른 매매 대응 필요.</div>", unsafe_allow_html=True)
-        ticker4 = st.text_input("", placeholder="티커 입력 (예: NVDA)", key="ticker4")
-        if st.button("🔍 분석", key="btn4"):
-            st.success(f"{ticker4} (스캘핑) 분석 준비 중...")
-        st.markdown("</div>", unsafe_allow_html=True)
-
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 with col5:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>5️⃣ 뉴스 이벤트 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>실적, 인수, 뉴스 기반으로 단기 변동성 포착.</div>", unsafe_allow_html=True)
-        ticker5 = st.text_input("", placeholder="티커 입력 (예: AMZN)", key="ticker5")
-        if st.button("🔍 분석", key="btn5"):
-            st.success(f"{ticker5} (뉴스 이벤트 트레이딩) 분석 준비 중...")
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>5️⃣ 뉴스 이벤트 트레이딩</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# 푸터
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown(
-    "<p style='text-align: center; font-size: 13px; color: gray;'>Made by Son Jiwan | Powered by Streamlit</p>",
-    unsafe_allow_html=True
-)
+st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Made by Son Jiwan | Powered by Streamlit</p>", unsafe_allow_html=True)
