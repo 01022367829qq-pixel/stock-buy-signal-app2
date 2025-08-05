@@ -5,6 +5,7 @@ import numpy as np
 
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
+# 스타일 설정
 st.markdown("""
 <style>
 .card {
@@ -38,6 +39,7 @@ input {
 </style>
 """, unsafe_allow_html=True)
 
+# RSI 계산 함수
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -47,6 +49,7 @@ def calculate_rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
+# 볼린저 밴드 계산 함수
 def calculate_bollinger(series, window=20, num_std=2):
     ma = series.rolling(window).mean()
     std = series.rolling(window).std()
@@ -55,6 +58,7 @@ def calculate_bollinger(series, window=20, num_std=2):
     width = upper - lower
     return upper, lower, width
 
+# ATR 계산 함수
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
     high_close = np.abs(df['High'] - df['Close'].shift(1))
@@ -62,6 +66,7 @@ def calculate_atr(df, period=14):
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     return tr.rolling(period).mean()
 
+# ADX 계산 함수 (수정된 버전)
 def calculate_adx(df, period=14):
     high = df['High']
     low = df['Low']
@@ -87,11 +92,17 @@ def calculate_adx(df, period=14):
     dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
     adx = dx.rolling(period).mean()
 
-    # 인덱스 맞춤 및 Series 변환 후 NaN 보충
-    adx = pd.Series(adx, index=df.index)
+    if isinstance(adx, pd.DataFrame):
+        adx = adx.iloc[:, 0]
+    else:
+        adx = pd.Series(adx.values.flatten(), index=df.index)
+
+    adx = adx.reindex(df.index)
     adx = adx.fillna(method='backfill').fillna(method='ffill')
+
     return adx
 
+# 데이 트레이딩 점수 함수
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -157,13 +168,14 @@ def score_turtle_enhanced(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
+# 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량)
 def score_swing_trading(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
 
     df = df.copy()
-    df['ADX'] = calculate_adx(df, 14)
     df['RSI'] = calculate_rsi(df['Close'], 14)
+    df['ADX'] = calculate_adx(df, 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
@@ -172,8 +184,8 @@ def score_swing_trading(df):
         return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
 
     close = float(df['Close'].iloc[-1])
-    adx = float(df['ADX'].iloc[-1])
     rsi = float(df['RSI'].iloc[-1])
+    adx = float(df['ADX'].iloc[-1])
     bbw = float(df['BB_width'].iloc[-1])
     vol = float(df['Volume'].iloc[-1])
     vol_mean = float(df['Vol_mean'].iloc[-1])
@@ -181,42 +193,48 @@ def score_swing_trading(df):
     score = 0
     msgs = []
 
+    if 30 < rsi < 50:
+        score += 20
+        msgs.append(f"RSI({rsi:.1f}) 안정적 범위")
+    elif rsi <= 30:
+        score += 10
+        msgs.append(f"RSI({rsi:.1f}) 과매도")
+
     if adx > 25:
         score += 30
         msgs.append(f"ADX({adx:.1f}) 강한 추세")
-    else:
-        msgs.append(f"ADX({adx:.1f}) 약한 추세")
-
-    if rsi < 40:
-        score += 20
-        msgs.append(f"RSI({rsi:.1f}) 과매도 구간")
-    elif rsi < 60:
-        score += 10
-        msgs.append(f"RSI({rsi:.1f}) 안정적 범위")
-    else:
-        msgs.append(f"RSI({rsi:.1f}) 과매수 구간")
+    elif 20 < adx <= 25:
+        score += 15
+        msgs.append(f"ADX({adx:.1f}) 중간 추세")
 
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
     if bbw < df['BB_width'].rolling(20).mean().iloc[-1] * 0.8 and close > prev_upper:
-        score += 15
+        score += 20
         msgs.append("BB 수축 후 상단 돌파")
 
     if vol > vol_mean * 1.2:
-        score += 15
+        score += 20
         msgs.append("거래량 증가")
 
     score = max(0, min(100, score))
     if not msgs:
         msgs = ["신호 없음"]
 
-    # 진입가, 목표가, 손절가 설정 (ADX에 따라 가변)
+    # ADX에 따른 손절가, 목표가 산정 (예: 추세 강도에 비례)
     entry_price = close
-    if adx > 25:
-        target_price = close * 1.07  # 7% 상승 목표
-        stop_loss = close * 0.95    # 5% 손절
+    atr_val = calculate_atr(df, 14).iloc[-1]
+    if np.isnan(atr_val):
+        atr_val = (df['High'].iloc[-1] - df['Low'].iloc[-1])  # fallback
+
+    if adx > 30:
+        stop_loss = close - (atr_val * 1.0)
+        target_price = close + (atr_val * 1.5)
+    elif adx > 20:
+        stop_loss = close - (atr_val * 1.2)
+        target_price = close + (atr_val * 1.8)
     else:
-        target_price = close * 1.05  # 5% 상승 목표
-        stop_loss = close * 0.97    # 3% 손절
+        stop_loss = close - (atr_val * 1.5)
+        target_price = close + (atr_val * 2.0)
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
@@ -227,6 +245,7 @@ st.markdown("---")
 
 col1, col2, col3 = st.columns(3)
 
+# 데이 트레이딩 카드
 with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -256,42 +275,44 @@ with col1:
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+# 스윙 트레이딩 카드
 with col2:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>2️⃣ 스윙 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합</div>", unsafe_allow_html=True)
-        ticker_swing = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_swing")
-        if st.button("🔍 분석", key="btn_swing"):
-            if not ticker_swing.strip():
-                st.warning("티커를 입력하세요.")
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>2️⃣ 스윙 트레이딩</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>Tony Cruz 전략 + RSI, ADX, BB, 거래량</div>", unsafe_allow_html=True)
+    ticker_swing = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_swing")
+    if st.button("🔍 분석", key="btn_swing"):
+        if not ticker_swing.strip():
+            st.warning("티커를 입력하세요.")
+        else:
+            df_swing = yf.download(ticker_swing, period="6mo", interval="1d")
+            if df_swing.empty:
+                st.error("데이터를 불러올 수 없습니다.")
             else:
-                df_swing = yf.download(ticker_swing, period="6mo", interval="1d")
-                if df_swing.empty:
-                    st.error("데이터를 불러올 수 없습니다.")
-                else:
-                    score, msg, entry, target, stop = score_swing_trading(df_swing)
-                    st.success(f"점수: {score} / 100")
-                    st.info(msg)
+                score, msg, entry, target, stop = score_swing_trading(df_swing)
+                st.success(f"점수: {score} / 100")
+                st.info(msg)
 
-                    if entry and target and stop:
-                        st.markdown(f"""
-                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-                        <strong>💡 자동 계산 진입/청산가:</strong><br>
-                        - 진입가: {entry:.2f}<br>
-                        - 목표가: {target:.2f}<br>
-                        - 손절가: {stop:.2f}
-                        </div>
-                        """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+                if entry and target and stop:
+                    st.markdown(f"""
+                    <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
+                    <strong>💡 자동 계산 진입/청산가:</strong><br>
+                    - 진입가: {entry:.2f}<br>
+                    - 목표가: {target:.2f}<br>
+                    - 손절가: {stop:.2f}
+                    </div>
+                    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
+# 포지션 트레이딩 카드 (미구현)
 with col3:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
     st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-col4, col5,_ = st.columns([1,1,1])
+# 하단 카드들 (스캘핑, 뉴스 이벤트)
+col4, col5, _ = st.columns([1,1,1])
 with col4:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
