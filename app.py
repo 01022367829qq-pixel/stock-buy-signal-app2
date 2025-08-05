@@ -64,7 +64,7 @@ def calculate_atr(df, period=14):
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     return tr.rolling(period).mean()
 
-# 수정된 calculate_adx 함수 (차원 문제 해결)
+# 수정된 calculate_adx 함수
 def calculate_adx(df, period=14):
     high = df['High']
     low = df['Low']
@@ -73,6 +73,7 @@ def calculate_adx(df, period=14):
     plus_dm = high.diff()
     minus_dm = low.diff()
 
+    # .values 제거, Series 직접 비교
     plus_dm_adj = np.where((plus_dm > minus_dm) & (plus_dm > 0), plus_dm, 0)
     minus_dm_adj = np.where((minus_dm > plus_dm) & (minus_dm > 0), minus_dm, 0)
 
@@ -215,7 +216,6 @@ def score_swing_trading(df):
     if not msgs:
         msgs = ["신호 없음"]
 
-    # ADX에 따라 진입, 손절, 목표가 비율 조정
     entry_price = close
     if adx > 30:
         target_price = close * 1.07
@@ -252,14 +252,14 @@ with col1:
                     st.info(msg)
 
                     if entry and target and stop:
-                        st.markdown(f"""
+                        st.markdown("""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
                         <strong>💡 자동 계산 진입/청산가:</strong><br>
-                        - 진입가: {entry:.2f}<br>
-                        - 목표가: {target:.2f}<br>
-                        - 손절가: {stop:.2f}
+                        - 진입가: {:.2f}<br>
+                        - 목표가: {:.2f}<br>
+                        - 손절가: {:.2f}
                         </div>
-                        """, unsafe_allow_html=True)
+                        """.format(entry, target, stop), unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
