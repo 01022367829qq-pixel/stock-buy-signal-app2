@@ -40,6 +40,7 @@ input {
 """, unsafe_allow_html=True)
 
 # 지표 계산 함수들
+
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -49,6 +50,7 @@ def calculate_rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
+
 def calculate_bollinger(series, window=20, num_std=2):
     ma = series.rolling(window).mean()
     std = series.rolling(window).std()
@@ -56,6 +58,7 @@ def calculate_bollinger(series, window=20, num_std=2):
     lower = ma - num_std * std
     width = upper - lower
     return upper, lower, width
+
 
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
@@ -65,33 +68,32 @@ def calculate_atr(df, period=14):
     return tr.rolling(period).mean()
 
 # 점수 함수: 터틀 전략 + 보조지표 결합
+
 def score_turtle_enhanced(df):
-    if df is None or df.empty or len(df) < 60 or df.isna().any().any():
-        return 0, "데이터가 충분하지 않거나 결측치가 있습니다."
+    # 데이터 충분성 체크
+    if df is None or df.empty or len(df) < 60:
+        return 0, "데이터가 충분하지 않습니다."
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
-    df['10d_low'] = df['Low'].rolling(10).min().shift(1)
-    df['ATR'] = calculate_atr(df, 14)
-    df['RSI'] = calculate_rsi(df['Close'], 14)
+    df['10d_low']  = df['Low'].rolling(10).min().shift(1)
+    df['ATR']      = calculate_atr(df, 14)
+    df['RSI']      = calculate_rsi(df['Close'], 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-    try:
-        close = df['Close'].iat[-1]
-        high20 = df['20d_high'].iat[-1]
-        low10 = df['10d_low'].iat[-1]
-        atr_val = df['ATR'].iat[-1]
-        rsi = df['RSI'].iat[-1]
-        bbw = df['BB_width'].iat[-1]
-        bbw_mean = df['BB_width_mean'].iat[-1]
-        vol = df['Volume'].iat[-1]
-        vol_mean = df['Vol_mean'].iat[-1]
-    except Exception:
-        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"
+    close = df['Close'].iat[-1]
+    high20 = df['20d_high'].iat[-1]
+    low10 = df['10d_low'].iat[-1]
+    atr_val = df['ATR'].iat[-1]
+    rsi = df['RSI'].iat[-1]
+    bbw = df['BB_width'].iat[-1]
+    bbw_mean = df['BB_width_mean'].iat[-1]
+    vol = df['Volume'].iat[-1]
+    vol_mean = df['Vol_mean'].iat[-1]
 
-    # NaN 체크
+    # NaN 또는 None 체크
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
             return 0, "필요한 기술 지표 데이터가 부족합니다."
@@ -149,7 +151,8 @@ with col1:
             if not ticker.strip():
                 st.warning("티커를 입력하세요.")
             else:
-                df = yf.download(ticker, period="3mo", interval="1d")
+                # ✅ 수정된 부분: 3mo → 6mo
+                df = yf.download(ticker, period="6mo", interval="1d")
                 if df.empty:
                     st.error("데이터를 불러올 수 없습니다.")
                 else:
