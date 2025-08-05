@@ -39,7 +39,7 @@ input {
 </style>
 """, unsafe_allow_html=True)
 
-# 지표 계산 함수들
+# 지표 계산 함수들 (기존 함수 재활용)
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -96,7 +96,7 @@ def calculate_adx(df, period=14):
 
     return adx
 
-# 점수 함수: 터틀 전략 + 보조지표 결합 + 진입/목표/손절가 계산
+# 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -227,6 +227,60 @@ def score_swing_trading(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
+# 포지션 트레이딩 점수 함수 예시 (간단한 EMA, RSI, ATR 조합)
+def score_position_trading(df):
+    if df is None or df.empty or len(df) < 50:
+        return 0, "데이터가 충분하지 않습니다.", None, None, None
+
+    df = df.copy()
+    df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
+    df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
+    df['RSI'] = calculate_rsi(df['Close'], 14)
+    df['ATR'] = calculate_atr(df, 14)
+
+    df.dropna(inplace=True)
+    if len(df) < 1:
+        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
+
+    close = float(df['Close'].iloc[-1])
+    ema50 = float(df['EMA50'].iloc[-1])
+    ema200 = float(df['EMA200'].iloc[-1])
+    rsi = float(df['RSI'].iloc[-1])
+    atr = float(df['ATR'].iloc[-1])
+
+    score = 0
+    msgs = []
+
+    # 장기 추세 판단
+    if ema50 > ema200:
+        score += 40
+        msgs.append("EMA50 > EMA200: 상승 추세")
+    else:
+        msgs.append("EMA50 <= EMA200: 하락 추세")
+
+    # RSI 상태
+    if rsi < 40:
+        score += 10
+        msgs.append(f"RSI({rsi:.1f}) 과매도 영역")
+    elif rsi > 70:
+        score -= 10
+        msgs.append(f"RSI({rsi:.1f}) 과매수 영역")
+
+    # 최근 변동성
+    if atr > df['ATR'].rolling(50).mean().iloc[-1]:
+        score += 20
+        msgs.append("ATR 증가: 변동성 확대")
+
+    score = max(0, min(100, score))
+    if not msgs:
+        msgs = ["신호 없음"]
+
+    entry_price = close
+    target_price = close * 1.15  # 15% 목표가 예시
+    stop_loss = close - (atr * 2)  # ATR 2배 손절 예시
+
+    return score, "; ".join(msgs), entry_price, target_price, stop_loss
+
 # UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
@@ -293,12 +347,35 @@ with col2:
         st.markdown("</div>", unsafe_allow_html=True)
 
 with col3:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container():
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-desc'>EMA, RSI, ATR 결합 전략</div>", unsafe_allow_html=True)
+        ticker_position = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_position")
+        if st.button("🔍 분석", key="btn_position"):
+            if not ticker_position.strip():
+                st.warning("티커를 입력하세요.")
+            else:
+                df_pos = yf.download(ticker_position, period="1y", interval="1d")
+                if df_pos.empty:
+                    st.error("데이터를 불러올 수 없습니다.")
+                else:
+                    score, msg, entry, target, stop = score_position_trading(df_pos)
+                    st.success(f"점수: {score} / 100")
+                    st.info(msg)
 
-col4, col5,_ = st.columns([1,1,1])
+                    if entry and target and stop:
+                        st.markdown(f"""
+                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
+                        <strong>💡 자동 계산 진입/청산가:</strong><br>
+                        - 진입가: {entry:.2f}<br>
+                        - 목표가: {target:.2f}<br>
+                        - 손절가: {stop:.2f}
+                        </div>
+                        """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+col4, col5, _ = st.columns([1,1,1])
 with col4:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
