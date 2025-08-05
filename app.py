@@ -82,15 +82,15 @@ def score_turtle_enhanced(df):
     if len(df) < 1:
         return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
 
-    close = df['Close'].iloc[-1]
-    high20 = df['20d_high'].iloc[-1]
-    low10 = df['10d_low'].iloc[-1]
-    atr_val = df['ATR'].iloc[-1]
-    rsi = df['RSI'].iloc[-1]
-    bbw = df['BB_width'].iloc[-1]
-    bbw_mean = df['BB_width_mean'].iloc[-1]
-    vol = df['Volume'].iloc[-1]
-    vol_mean = df['Vol_mean'].iloc[-1]
+    close = float(df['Close'].iloc[-1])
+    high20 = float(df['20d_high'].iloc[-1])
+    low10 = float(df['10d_low'].iloc[-1])
+    atr_val = float(df['ATR'].iloc[-1])
+    rsi = float(df['RSI'].iloc[-1])
+    bbw = float(df['BB_width'].iloc[-1])
+    bbw_mean = float(df['BB_width_mean'].iloc[-1])
+    vol = float(df['Volume'].iloc[-1])
+    vol_mean = float(df['Vol_mean'].iloc[-1])
 
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
