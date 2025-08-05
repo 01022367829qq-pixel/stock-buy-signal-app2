@@ -362,8 +362,14 @@ with col2:
 with col3:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, EMA, ATR, 거래량 지표 결합 </div>", unsafe_allow_html=True)
+        st.markdown("""
+<div class='card-title'>
+  3️⃣ 포지션 트레이딩
+  <span style="cursor: help;" title="EMA, RSI, ATR을 결합한 장기 투자 전략입니다.">ⓘ</span>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("<div class='card-desc'>EMA, RSI, ATR 결합 전략</div>", unsafe_allow_html=True)
         ticker_position = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_position")
         if st.button("🔍 분석", key="btn_position"):
             if not ticker_position.strip():
