@@ -39,7 +39,7 @@ input {
 </style>
 """, unsafe_allow_html=True)
 
-# 기술 지표 함수들
+# 보조지표 계산 함수들
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -70,7 +70,7 @@ def calculate_adx(df, period=14):
     close = df['Close']
 
     plus_dm = high.diff()
-    minus_dm = low.diff().abs()
+    minus_dm = low.diff() * -1
 
     plus_dm = plus_dm.where((plus_dm > 0) & (plus_dm > minus_dm), 0.0)
     minus_dm = minus_dm.where((minus_dm > 0) & (minus_dm > plus_dm), 0.0)
@@ -86,7 +86,7 @@ def calculate_adx(df, period=14):
     dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
     adx = dx.rolling(period).mean()
 
-    return adx
+    return pd.Series(adx, index=df.index)
 
 # 데이 트레이딩 점수 함수
 def score_turtle_enhanced(df):
@@ -154,7 +154,7 @@ def score_turtle_enhanced(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# 스윙 트레이딩 점수 함수
+# 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량)
 def score_swing_trading(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -176,129 +176,63 @@ def score_swing_trading(df):
     vol = float(df['Volume'].iloc[-1])
     vol_mean = float(df['Vol_mean'].iloc[-1])
 
+    for val in [adx, rsi, bbw, vol_mean]:
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
+
     score = 0
     msgs = []
 
-    if adx > 25:
-        score += 40
-        msgs.append(f"ADX({adx:.1f}) 강한 추세")
-    else:
-        score += 10
-        msgs.append(f"ADX({adx:.1f}) 약한 추세")
-
-    if rsi < 30:
-        score += 20
-        msgs.append(f"RSI({rsi:.1f}) 과매도")
-    elif rsi < 50:
-        score += 10
+    if 30 <= rsi <= 60:
+        score += 30
         msgs.append(f"RSI({rsi:.1f}) 안정적 범위")
-
-    bbw_mean = df['BB_width'].rolling(20).mean().iloc[-1]
-    if bbw < bbw_mean * 0.8:
-        score += 15
-        msgs.append("볼린저 밴드 수축")
-
-    if vol > vol_mean * 1.2:
-        score += 15
-        msgs.append("거래량 증가")
+    if adx >= 20:
+        score += 30
+        msgs.append(f"ADX({adx:.1f}) 강한 추세")
+    if close > df['BB_lower'].iloc[-1] and close < df['BB_upper'].iloc[-1]:
+        score += 20
+        msgs.append("가격 볼린저 밴드 내 위치")
+    if vol > vol_mean:
+        score += 20
+        msgs.append("거래량 평균 이상")
 
     score = max(0, min(100, score))
     if not msgs:
         msgs = ["신호 없음"]
 
     entry_price = close
-    if adx > 30:
-        target_price = close * 1.07  # 7% 목표 수익
-        stop_loss = close * 0.96    # 4% 손절
+    atr_val = calculate_atr(df, 14).iloc[-1] if not df.empty else 0
+    if adx >= 25:
+        target_price = close + atr_val * 1.5
+        stop_loss = close - atr_val * 1.0
     else:
-        target_price = close * 1.05
-        stop_loss = close * 0.97
+        target_price = close + atr_val * 1.0
+        stop_loss = close - atr_val * 0.5
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
 # UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
-st.markdown("---")
 
-col1, col2, col3 = st.columns(3)
+ticker_input = st.text_input("종목 티커를 입력하세요 (예: AAPL, KULR)", value="AAPL").upper()
+timeframe = st.selectbox("트레이딩 유형 선택", ["데이 트레이딩", "스윙 트레이딩"])
 
-with col1:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>터틀+RSI+BB+거래량+ATR 결합</div>", unsafe_allow_html=True)
-        ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
-        if st.button("🔍 분석", key="btn_dt"):
-            if not ticker.strip():
-                st.warning("티커를 입력하세요.")
-            else:
-                df = yf.download(ticker, period="3mo", interval="1d")
-                if df.empty:
-                    st.error("데이터를 불러올 수 없습니다.")
-                else:
-                    score, msg, entry, target, stop = score_turtle_enhanced(df)
-                    st.success(f"점수: {score} / 100")
-                    st.info(msg)
+if ticker_input:
+    df = yf.download(ticker_input, period="3mo", interval="1d")
+    if df.empty:
+        st.error("해당 종목 데이터가 없습니다. 티커를 다시 확인해주세요.")
+    else:
+        if timeframe == "데이 트레이딩":
+            score, msg, entry, target, stop = score_turtle_enhanced(df)
+        else:
+            score, msg, entry, target, stop = score_swing_trading(df)
 
-                    if entry and target and stop:
-                        st.markdown(f"""
-                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-                        <strong>💡 자동 계산 진입/청산가:</strong><br>
-                        - 진입가: {entry:.2f}<br>
-                        - 목표가: {target:.2f}<br>
-                        - 손절가: {stop:.2f}
-                        </div>
-                        """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-with col2:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>2️⃣ 스윙 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합</div>", unsafe_allow_html=True)
-        ticker_swing = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_swing")
-        if st.button("🔍 분석", key="btn_swing"):
-            if not ticker_swing.strip():
-                st.warning("티커를 입력하세요.")
-            else:
-                df_swing = yf.download(ticker_swing, period="6mo", interval="1d")
-                if df_swing.empty:
-                    st.error("데이터를 불러올 수 없습니다.")
-                else:
-                    score, msg, entry, target, stop = score_swing_trading(df_swing)
-                    st.success(f"점수: {score} / 100")
-                    st.info(msg)
-
-                    if entry and target and stop:
-                        st.markdown(f"""
-                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-                        <strong>💡 자동 계산 진입/청산가:</strong><br>
-                        - 진입가: {entry:.2f}<br>
-                        - 목표가: {target:.2f}<br>
-                        - 손절가: {stop:.2f}
-                        </div>
-                        """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-with col3:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-col4, col5, _ = st.columns([1,1,1])
-with col4:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-with col5:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>5️⃣ 뉴스 이벤트 트레이딩</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Made by Son Jiwan | Powered by Streamlit</p>", unsafe_allow_html=True)
+        st.markdown(f"### 분석 결과: {ticker_input} ({timeframe})")
+        st.markdown(f"**점수: {score} / 100**")
+        st.markdown(f"**상태 메시지:** {msg}")
+        if entry and target and stop:
+            st.markdown(f"💡 자동 계산 진입/청산가:")
+            st.markdown(f"- 진입가: {entry:.2f}")
+            st.markdown(f"- 목표가: {target:.2f}")
+            st.markdown(f"- 손절가: {stop:.2f}")
