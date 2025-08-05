@@ -7,39 +7,39 @@ st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
 # 스타일 설정
 st.markdown("""
-    <style>
-    .card {
-        background-color: #f9f9f9;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-        text-align: center;
-        transition: transform 0.2s;
-        height: 100%;
-        margin-bottom: 20px;
-    }
-    .card:hover {
-        transform: scale(1.02);
-        background-color: #e8f5e9;
-    }
-    .card-title {
-        font-size: 20px;
-        font-weight: bold;
-        color: #2e7d32;
-        margin-bottom: 10px;
-    }
-    .card-desc {
-        font-size: 14px;
-        color: #555;
-        margin-bottom: 15px;
-    }
-    input {
-        text-align: center;
-    }
-    </style>
+<style>
+.card {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.2s;
+    height: 100%;
+    margin-bottom: 20px;
+}
+.card:hover {
+    transform: scale(1.02);
+    background-color: #e8f5e9;
+}
+.card-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #2e7d32;
+    margin-bottom: 10px;
+}
+.card-desc {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 15px;
+}
+input {
+    text-align: center;
+}
+</style>
 """, unsafe_allow_html=True)
 
-# 기술 지표 함수
+# 지표 계산 함수들
 
 def calculate_rsi(series, period=14):
     delta = series.diff()
@@ -67,22 +67,10 @@ def calculate_atr(df, period=14):
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     return tr.rolling(period).mean()
 
-
-def calculate_adx(df, period=14):
-    up = df['High'].diff()
-    down = df['Low'].diff().abs()
-    plus_dm = up.where((up > down) & (up > 0), 0.0)
-    minus_dm = down.where((down > up) & (down > 0), 0.0)
-    atr = calculate_atr(df, period)
-    plus_di = 100 * plus_dm.ewm(alpha=1/period, adjust=False).mean() / atr
-    minus_di = 100 * minus_dm.ewm(alpha=1/period, adjust=False).mean() / atr
-    dx = (plus_di - minus_di).abs() / (plus_di + minus_di) * 100
-    adx = dx.ewm(alpha=1/period, adjust=False).mean()
-    return adx
-
-# 점수 함수: 터틀 전략 + 보조지표 결합 (ADX 제거 버전)
+# 점수 함수: 터틀 전략 + 보조지표 결합
 
 def score_turtle_enhanced(df):
+    # 데이터 충분성 체크
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다."
 
@@ -95,53 +83,53 @@ def score_turtle_enhanced(df):
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
+    # 마지막 스칼라 값
     last = df.iloc[-1]
-    close       = last['Close']
-    high20      = last['20d_high']
-    low10       = last['10d_low']
-    atr_val     = last['ATR']
-    rsi         = last['RSI']
-    bbw         = last['BB_width']
-    bbw_mean    = last['BB_width_mean']
-    vol         = last['Volume']
-    vol_mean    = last['Vol_mean']
+    close = last['Close']
+    high20 = last['20d_high']
+    low10 = last['10d_low']
+    atr_val = last['ATR']
+    rsi = last['RSI']
+    bbw = last['BB_width']
+    bbw_mean = last['BB_width_mean']
+    vol = last['Volume']
+    vol_mean = last['Vol_mean']
 
-        # NaN 또는 None 체크
-    nan_flag = False
+    # NaN 또는 None 체크
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
-        try:
-            if isinstance(val, float) and np.isnan(val):
-                nan_flag = True
-                break
-        except:
-            if val is None:
-                nan_flag = True
-                break
-    if nan_flag:
-        return 0, "필요한 기술 지표 데이터가 부족합니다."
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            return 0, "필요한 기술 지표 데이터가 부족합니다."
 
     score = 0
     msgs = []
 
-    # 터틀 돌파 신호
+    # 터틀 돌파
     if close > high20:
-        score += 30; msgs.append("20일 최고가 돌파")
+        score += 30
+        msgs.append("20일 최고가 돌파")
     # RSI 필터
     if rsi < 50:
-        score += 10; msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
+        score += 10
+        msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
     # 볼린저 밴드 스퀴즈 탈출
-    if bbw < bbw_mean * 0.8 and close > df['BB_upper'].iloc[-2]:
-        score += 15; msgs.append("BB 수축 후 상단 돌파")
+    prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
+    if bbw is not None and bbw_mean is not None and prev_upper is not None:
+        if bbw < bbw_mean * 0.8 and close > prev_upper:
+            score += 15
+            msgs.append("BB 수축 후 상단 돌파")
     # 거래량 필터
     if vol > vol_mean * 1.2:
-        score += 15; msgs.append("거래량 증가")
+        score += 15
+        msgs.append("거래량 증가")
     # ATR 모멘텀
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
     if atr_val > atr_mean:
-        score += 20; msgs.append("ATR 증가")
+        score += 20
+        msgs.append("ATR 증가")
     # 위험 구간 패널티
     if close < low10:
-        score -= 20; msgs.append("10일 최저가 이탈 위험")
+        score -= 20
+        msgs.append("10일 최저가 이탈 위험")
 
     score = max(0, min(100, score))
     if not msgs:
@@ -159,7 +147,7 @@ with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>터틀+RSI+BB+ADX+거래량 필터 결합</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-desc'>터틀+RSI+BB+거래량+ATR 결합</div>", unsafe_allow_html=True)
         ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
         if st.button("🔍 분석", key="btn_dt"):
             if not ticker.strip():
