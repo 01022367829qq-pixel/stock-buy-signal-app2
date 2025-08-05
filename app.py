@@ -136,4 +136,6 @@ if st.button("분석 시작"):
                 st.subheader("🔎 포지션 트레이딩 결과")
 
             st.write(f"**✅ 점수:** {score}/100")
-            st.write(f"**📍 진입**
+st.write(f"**📍 진입가:** {entry:.2f}")
+st.write(f"**🎯 목표가:** {target:.2f}")
+st.write(f"**🛑 손절가:** {stop:.2f}")
