@@ -450,6 +450,6 @@ st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Made by S
 st.markdown("""
 <hr style="margin-top: 50px; margin-bottom: 10px;">
 <div style='text-align: center; font-size: 14px; color: #888;'>
-📩 피드백은 인스타그램 <a href='https://instagram.com/your_username' target='_blank' style='color: #90caf9;'>@1trade_vibes</a> 로 보내주세요!
+📩 피드백은 인스타그램 <a href='https://instagram.com/your_username' target='_blank' style='color: #90caf9;'>@trade_vibes.kr</a> 로 보내주세요!
 </div>
 """, unsafe_allow_html=True)
