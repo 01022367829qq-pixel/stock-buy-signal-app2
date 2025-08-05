@@ -39,7 +39,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 지표 계산 함수들
+# 기술 지표 함수
+
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -68,86 +69,86 @@ def calculate_atr(df, period=14):
 
 
 def calculate_adx(df, period=14):
-    # +DM, -DM 계산
     up = df['High'].diff()
     down = df['Low'].diff().abs()
     plus_dm = up.where((up > down) & (up > 0), 0.0)
     minus_dm = down.where((down > up) & (down > 0), 0.0)
-    # ATR 계산
     atr = calculate_atr(df, period)
-    # DI 및 DX 계산
     plus_di = 100 * plus_dm.ewm(alpha=1/period, adjust=False).mean() / atr
     minus_di = 100 * minus_dm.ewm(alpha=1/period, adjust=False).mean() / atr
     dx = (plus_di - minus_di).abs() / (plus_di + minus_di) * 100
-    # ADX는 DX의 지수이동평균
     adx = dx.ewm(alpha=1/period, adjust=False).mean()
     return adx
 
-# 점수 함수: 터틀+보조지표 결합
-: 터틀+보조지표 결합
+# 점수 함수: 터틀 전략 + 보조지표 결합
 
 def score_turtle_enhanced(df):
-   습니다."
+    if df is None or df.empty or len(df) < 60:
+        return 0, "데이터가 충분하지 않습니다."
+
     df = df.copy()
-    # 기본 돌파 및 변동성 if df is None or df.empty or len(df) < 60:
-        return 0, "데이터가 충분하지 않
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
-    df['10d_low'] = df['Low'].rolling(10).min().shift(1)
-    df['ATR'] = calculate_atr(df, 14)
-    # 보조 지표
-    df['RSI'] = calculate_rsi(df['Close'], 14)
+    df['10d_low']  = df['Low'].rolling(10).min().shift(1)
+    df['ATR']      = calculate_atr(df, 14)
+    df['RSI']      = calculate_rsi(df['Close'], 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
-    df['ADX'] = calculate_adx(df, 14)
-
+    df['ADX']      = calculate_adx(df, 14)
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-    # 마지막 값
     last = df.iloc[-1]
-    close, high20, low10, atr, rsi, bbw, bbw_mean, adx, vol, vol_mean = (
-        last['Close'], last['20d_high'], last['10d_low'], last['ATR'],
-        last['RSI'], last['BB_width'], last['BB_width_mean'], last['ADX'],
-        last['Volume'], last['Vol_mean']
-    )
-    # NaN 체크
-    if any(pd.isna(x) for x in [high20, low10, atr, rsi, bbw, bbw_mean, adx, vol_mean]):
+    close       = last['Close']
+    high20      = last['20d_high']
+    low10       = last['10d_low']
+    atr_val     = last['ATR']
+    rsi         = last['RSI']
+    bbw         = last['BB_width']
+    bbw_mean    = last['BB_width_mean']
+    adx_val     = last['ADX']
+    vol         = last['Volume']
+    vol_mean    = last['Vol_mean']
+
+    if any(pd.isna(x) for x in [high20, low10, atr_val, rsi, bbw, bbw_mean, adx_val, vol_mean]):
         return 0, "필요한 기술 지표 데이터가 부족합니다."
 
     score = 0
     msgs = []
-    # 터틀 돌파
+
+    # 터틀 돌파 신호
     if close > high20:
         score += 30; msgs.append("20일 최고가 돌파")
-    # RSI 필터 (과매도 구간 진입)
+    # RSI 필터
     if rsi < 50:
         score += 10; msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
-    # 볼린저 스퀴즈 탈출
+    # 볼린저 밴드 스퀴즈 탈출
     if bbw < bbw_mean * 0.8 and close > df['BB_upper'].iloc[-2]:
         score += 15; msgs.append("BB 수축 후 상단 돌파")
-    # ADX 강세 추세
-    if adx > 20:
-        score += 10; msgs.append(f"ADX({adx:.1f}) 강세 추세")
-    # 거래량 증가
+    # ADX 추세 필터
+    if adx_val > 20:
+        score += 10; msgs.append(f"ADX({adx_val:.1f}) 강세 추세")
+    # 거래량 필터
     if vol > vol_mean * 1.2:
         score += 15; msgs.append("거래량 증가")
     # ATR 모멘텀
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
-    if atr > atr_mean:
+    if atr_val > atr_mean:
         score += 20; msgs.append("ATR 증가")
     # 위험 구간 패널티
     if close < low10:
         score -= 20; msgs.append("10일 최저가 이탈 위험")
 
     score = max(0, min(100, score))
-    if not msgs: msgs = ["신호 없음"]
+    if not msgs:
+        msgs = ["신호 없음"]
     return score, "; ".join(msgs)
 
-# 제목
-st.markdown("<h1 style='text-align: center; color: #4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
+# UI 렌더링
+st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 col1, col2, col3 = st.columns(3)
+
 with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -155,20 +156,24 @@ with col1:
         st.markdown("<div class='card-desc'>터틀+RSI+BB+ADX+거래량 필터 결합</div>", unsafe_allow_html=True)
         ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
         if st.button("🔍 분석", key="btn_dt"):
-            if not ticker.strip(): st.warning("티커를 입력하세요.")
+            if not ticker.strip():
+                st.warning("티커를 입력하세요.")
             else:
                 df = yf.download(ticker, period="3mo", interval="1d")
-                if df.empty: st.error("데이터를 불러올 수 없습니다.")
+                if df.empty:
+                    st.error("데이터를 불러올 수 없습니다.")
                 else:
                     score, msg = score_turtle_enhanced(df)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
         st.markdown("</div>", unsafe_allow_html=True)
+
 with col2:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>2️⃣ 스윙 트레이딩</div>", unsafe_allow_html=True)
     st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
 with col3:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
@@ -181,6 +186,7 @@ with col4:
     st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
     st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
 with col5:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>5️⃣ 뉴스 이벤트 트레이딩</div>", unsafe_allow_html=True)
