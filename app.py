@@ -70,8 +70,9 @@ def calculate_atr(df, period=14):
 # 점수 함수: 터틀 전략 + 보조지표 결합
 
 def score_turtle_enhanced(df):
+    # 데이터 충분성 체크
     if df is None or df.empty or len(df) < 60:
-        return 0, f"데이터가 충분하지 않습니다. 행 개수: {len(df) if df is not None else 'None'}"
+        return 0, "데이터가 충분하지 않습니다."
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
@@ -82,49 +83,54 @@ def score_turtle_enhanced(df):
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
+    # 결측치 제거 및 인덱스 초기화
     df = df.dropna().reset_index(drop=True)
     if len(df) == 0:
         return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"
 
-    close = df['Close'].iloc[-1]
-    high20 = df['20d_high'].iloc[-1]
-    low10 = df['10d_low'].iloc[-1]
-    atr_val = df['ATR'].iloc[-1]
-    rsi = df['RSI'].iloc[-1]
-    bbw = df['BB_width'].iloc[-1]
-    bbw_mean = df['BB_width_mean'].iloc[-1]
-    vol = df['Volume'].iloc[-1]
-    vol_mean = df['Vol_mean'].iloc[-1]
-
-    for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
-        if val is None or (isinstance(val, float) and np.isnan(val)):
-            return 0, "필요한 기술 지표 데이터가 부족합니다."
+    # 단일 스칼라 값으로 변환 (float)
+    close = float(df['Close'].iloc[-1])
+    high20 = float(df['20d_high'].iloc[-1])
+    low10 = float(df['10d_low'].iloc[-1])
+    atr_val = float(df['ATR'].iloc[-1])
+    rsi = float(df['RSI'].iloc[-1])
+    bbw = float(df['BB_width'].iloc[-1])
+    bbw_mean = float(df['BB_width_mean'].iloc[-1])
+    vol = float(df['Volume'].iloc[-1])
+    vol_mean = float(df['Vol_mean'].iloc[-1])
 
     score = 0
     msgs = []
 
+    # 터틀 돌파
     if close > high20:
         score += 30
         msgs.append("20일 최고가 돌파")
+
+    # RSI 필터
     if rsi < 50:
         score += 10
         msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
 
+    # 볼린저 밴드 스퀴즈 탈출
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
     if bbw is not None and bbw_mean is not None and prev_upper is not None:
         if bbw < bbw_mean * 0.8 and close > prev_upper:
             score += 15
             msgs.append("BB 수축 후 상단 돌파")
 
+    # 거래량 필터
     if vol > vol_mean * 1.2:
         score += 15
         msgs.append("거래량 증가")
 
+    # ATR 모멘텀
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
     if atr_val > atr_mean:
         score += 20
         msgs.append("ATR 증가")
 
+    # 위험 구간 패널티
     if close < low10:
         score -= 20
         msgs.append("10일 최저가 이탈 위험")
