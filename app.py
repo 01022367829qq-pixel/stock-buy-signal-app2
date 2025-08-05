@@ -83,19 +83,21 @@ def score_turtle_enhanced(df):
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-    # 마지막 스칼라 값
-    last = df.iloc[-1]
-    close = last['Close']
-    high20 = last['20d_high']
-    low10 = last['10d_low']
-    atr_val = last['ATR']
-    rsi = last['RSI']
-    bbw = last['BB_width']
-    bbw_mean = last['BB_width_mean']
-    vol = last['Volume']
-    vol_mean = last['Vol_mean']
+        # 마지막 스칼라 값 추출
+    close = df['Close'].iat[-1]
+    high20 = df['20d_high'].iat[-1]
+    low10 = df['10d_low'].iat[-1]
+    atr_val = df['ATR'].iat[-1]
+    rsi = df['RSI'].iat[-1]
+    bbw = df['BB_width'].iat[-1]
+    bbw_mean = df['BB_width_mean'].iat[-1]
+    vol = df['Volume'].iat[-1]
+    vol_mean = df['Vol_mean'].iat[-1]
 
     # NaN 또는 None 체크
+    for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            return 0, "필요한 기술 지표 데이터가 부족합니다."
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
             return 0, "필요한 기술 지표 데이터가 부족합니다."
