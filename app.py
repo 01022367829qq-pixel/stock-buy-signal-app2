@@ -283,7 +283,7 @@ def score_position_trading(df):
 
 # UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 모두 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 col1, col2, col3 = st.columns(3)
@@ -292,7 +292,7 @@ with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>터틀+RSI+BB+거래량+ATR 결합</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, BB, ATR, 거래량 지표 결합</div>", unsafe_allow_html=True)
         ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
         if st.button("🔍 분석", key="btn_dt"):
             if not ticker.strip():
@@ -321,7 +321,7 @@ with col2:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>2️⃣ 스윙 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-desc'>Tony Cruz의 전략 + RSI, BB, ADX, 거래량 지표 결합</div>", unsafe_allow_html=True)
         ticker_swing = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_swing")
         if st.button("🔍 분석", key="btn_swing"):
             if not ticker_swing.strip():
@@ -350,7 +350,7 @@ with col3:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>EMA, RSI, ATR 결합 전략</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, EMA, ATR, 거래량 지표 결합 </div>", unsafe_allow_html=True)
         ticker_position = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_position")
         if st.button("🔍 분석", key="btn_position"):
             if not ticker_position.strip():
