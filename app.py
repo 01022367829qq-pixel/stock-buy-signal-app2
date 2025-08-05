@@ -76,10 +76,13 @@ def score_turtle_day_trading(df):
     score = 0
     messages = []
 
-    # 매수 신호
-    if close_last > high_20d:
-        score += 50
-        messages.append("20일 최고가 돌파: 매수 신호 강함")
+        # 매수 신호
+    try:
+        if float(close_last) > float(high_20d):
+            score += 50
+            messages.append("20일 최고가 돌파: 매수 신호 강함")
+    except Exception:
+        pass
 
     # 위험 신호
     if close_last < low_10d:
