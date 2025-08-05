@@ -6,7 +6,6 @@ import numpy as np
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
 st.markdown("""
-st.markdown("""
 <style>
 /* 배경색 전체 검정 */
 body, .main {
