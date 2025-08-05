@@ -61,10 +61,10 @@ def score_turtle_day_trading(df):
     df['ATR']      = calculate_atr(df, 14)
 
     # 마지막 값 추출 (스칼라)
-    close_last = df['Close'].iat[-1]
-    high_20d   = df['20d_high'].iat[-1]
-    low_10d    = df['10d_low'].iat[-1]
-    atr_val    = df['ATR'].iat[-1]
+    close_last = df['Close'].iloc[-1]
+    high_20d   = df['20d_high'].iloc[-1]
+    low_10d    = df['10d_low'].iloc[-1]
+    atr_val    = df['ATR'].iloc[-1]
 
     # NaN or None 체크
     if any([high_20d is None, low_10d is None, atr_val is None,
@@ -87,7 +87,7 @@ def score_turtle_day_trading(df):
         messages.append("10일 최저가 이탈: 위험 신호")
 
     # 변동성 증가 확인
-    atr_mean = df['ATR'].rolling(window=30).mean().iat[-1]
+    atr_mean = df['ATR'].rolling(window=30).mean().iloc[-1]
     if atr_val > atr_mean:
         score += 30
         messages.append("ATR 증가: 변동성 높음")
