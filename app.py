@@ -5,7 +5,6 @@ import numpy as np
 
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
-# 스타일 설정
 st.markdown("""
 <style>
 .card {
@@ -39,8 +38,6 @@ input {
 </style>
 """, unsafe_allow_html=True)
 
-# 지표 계산 함수들
-
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -50,7 +47,6 @@ def calculate_rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
-
 def calculate_bollinger(series, window=20, num_std=2):
     ma = series.rolling(window).mean()
     std = series.rolling(window).std()
@@ -59,7 +55,6 @@ def calculate_bollinger(series, window=20, num_std=2):
     width = upper - lower
     return upper, lower, width
 
-
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
     high_close = np.abs(df['High'] - df['Close'].shift(1))
@@ -67,18 +62,9 @@ def calculate_atr(df, period=14):
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     return tr.rolling(period).mean()
 
-
-# 점수 함수: 터틀 전략 + 보조지표 결합
 def score_turtle_enhanced(df):
-    # 기본 체크
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다."
-
-    # 필요한 컬럼 존재 여부 확인
-    required_cols = ['Close', 'High', 'Low', 'Volume']
-    for col in required_cols:
-        if col not in df.columns or df[col].empty:
-            return 0, f"{col} 데이터가 누락되었습니다."
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
@@ -89,7 +75,10 @@ def score_turtle_enhanced(df):
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-    # 마지막 값 추출
+    df = df.dropna()
+    if len(df) < 1:
+        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"
+
     try:
         close = df['Close'].iat[-1]
         high20 = df['20d_high'].iat[-1]
@@ -103,20 +92,16 @@ def score_turtle_enhanced(df):
     except Exception:
         return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"
 
-    for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
-        if val is None or (isinstance(val, float) and np.isnan(val)):
-            return 0, "필요한 기술 지표 데이터가 부족합니다."
-
     score = 0
     msgs = []
 
-    # 점수 기준
     if close > high20:
         score += 30
         msgs.append("20일 최고가 돌파")
     if rsi < 50:
         score += 10
         msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
+
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
     if bbw is not None and bbw_mean is not None and prev_upper is not None:
         if bbw < bbw_mean * 0.8 and close > prev_upper:
@@ -125,10 +110,12 @@ def score_turtle_enhanced(df):
     if vol > vol_mean * 1.2:
         score += 15
         msgs.append("거래량 증가")
+
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
     if atr_val > atr_mean:
         score += 20
         msgs.append("ATR 증가")
+
     if close < low10:
         score -= 20
         msgs.append("10일 최저가 이탈 위험")
@@ -138,8 +125,6 @@ def score_turtle_enhanced(df):
         msgs = ["신호 없음"]
     return score, "; ".join(msgs)
 
-
-# UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
 st.markdown("---")
