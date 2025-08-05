@@ -5,7 +5,6 @@ import numpy as np
 
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
-# 스타일 설정
 st.markdown("""
 <style>
 .card {
@@ -39,7 +38,6 @@ input {
 </style>
 """, unsafe_allow_html=True)
 
-# RSI 계산
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -49,7 +47,6 @@ def calculate_rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
-# 볼린저 밴드 계산
 def calculate_bollinger(series, window=20, num_std=2):
     ma = series.rolling(window).mean()
     std = series.rolling(window).std()
@@ -58,7 +55,6 @@ def calculate_bollinger(series, window=20, num_std=2):
     width = upper - lower
     return upper, lower, width
 
-# ATR 계산
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
     high_close = np.abs(df['High'] - df['Close'].shift(1))
@@ -66,7 +62,6 @@ def calculate_atr(df, period=14):
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     return tr.rolling(period).mean()
 
-# ADX 계산 (인덱스 맞춤 포함)
 def calculate_adx(df, period=14):
     high = df['High']
     low = df['Low']
@@ -92,10 +87,11 @@ def calculate_adx(df, period=14):
     dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
     adx = dx.rolling(period).mean()
 
-    adx = adx.reindex(df.index)  # 인덱스 맞춤
+    # 인덱스 맞춤 및 Series 변환 후 NaN 보충
+    adx = pd.Series(adx, index=df.index)
+    adx = adx.fillna(method='backfill').fillna(method='ffill')
     return adx
 
-# 데이 트레이딩 점수 함수
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -161,7 +157,6 @@ def score_turtle_enhanced(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량)
 def score_swing_trading(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -170,7 +165,6 @@ def score_swing_trading(df):
     df['ADX'] = calculate_adx(df, 14)
     df['RSI'] = calculate_rsi(df['Close'], 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
-    df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
     df.dropna(inplace=True)
@@ -178,41 +172,36 @@ def score_swing_trading(df):
         return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
 
     close = float(df['Close'].iloc[-1])
-    rsi = float(df['RSI'].iloc[-1])
     adx = float(df['ADX'].iloc[-1])
+    rsi = float(df['RSI'].iloc[-1])
     bbw = float(df['BB_width'].iloc[-1])
-    bbw_mean = float(df['BB_width_mean'].iloc[-1])
     vol = float(df['Volume'].iloc[-1])
     vol_mean = float(df['Vol_mean'].iloc[-1])
-
-    for val in [rsi, adx, bbw, bbw_mean, vol_mean]:
-        if val is None or (isinstance(val, float) and np.isnan(val)):
-            return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
 
     score = 0
     msgs = []
 
-    if rsi < 40:
-        score += 15
-        msgs.append(f"RSI({rsi:.1f}) 과매도")
-    elif rsi < 60:
-        score += 10
-        msgs.append(f"RSI({rsi:.1f}) 안정적 범위")
-    else:
-        msgs.append(f"RSI({rsi:.1f}) 과매수 위험")
-
     if adx > 25:
-        score += 20
+        score += 30
         msgs.append(f"ADX({adx:.1f}) 강한 추세")
     else:
         msgs.append(f"ADX({adx:.1f}) 약한 추세")
 
+    if rsi < 40:
+        score += 20
+        msgs.append(f"RSI({rsi:.1f}) 과매도 구간")
+    elif rsi < 60:
+        score += 10
+        msgs.append(f"RSI({rsi:.1f}) 안정적 범위")
+    else:
+        msgs.append(f"RSI({rsi:.1f}) 과매수 구간")
+
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
-    if bbw < bbw_mean * 0.85 and close > prev_upper:
+    if bbw < df['BB_width'].rolling(20).mean().iloc[-1] * 0.8 and close > prev_upper:
         score += 15
         msgs.append("BB 수축 후 상단 돌파")
 
-    if vol > vol_mean * 1.3:
+    if vol > vol_mean * 1.2:
         score += 15
         msgs.append("거래량 증가")
 
