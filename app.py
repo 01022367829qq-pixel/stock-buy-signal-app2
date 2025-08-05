@@ -379,13 +379,13 @@ col4, col5, _ = st.columns([1,1,1])
 with col4:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>개발 단계에 있습니다...</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col5:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>5️⃣ 뉴스 이벤트 트레이딩</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>개발 단계에 있습니다...</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("<hr>", unsafe_allow_html=True)
