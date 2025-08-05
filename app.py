@@ -84,10 +84,13 @@ def score_turtle_day_trading(df):
     except Exception:
         pass
 
-    # 위험 신호
-    if close_last < low_10d:
-        score -= 30
-        messages.append("10일 최저가 이탈: 위험 신호")
+        # 위험 신호
+    try:
+        if float(close_last) < float(low_10d):
+            score -= 30
+            messages.append("10일 최저가 이탈: 위험 신호")
+    except Exception:
+        pass
 
     # 변동성 증가 확인
     atr_mean = df['ATR'].rolling(window=30).mean().iloc[-1]
