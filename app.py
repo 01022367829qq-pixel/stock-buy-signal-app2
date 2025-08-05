@@ -5,7 +5,7 @@ import numpy as np
 
 st.set_page_config(page_title="📈 매수 타점 분석기", layout="wide")
 
-# 스타일 설정 (기존 유지)
+# 스타일 설정
 st.markdown("""
 <style>
 .card {
@@ -39,7 +39,7 @@ input {
 </style>
 """, unsafe_allow_html=True)
 
-# --- 보조지표 함수들 ---
+# 지표 계산 함수들
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -47,8 +47,7 @@ def calculate_rsi(series, period=14):
     avg_gain = gain.rolling(period).mean()
     avg_loss = loss.rolling(period).mean()
     rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
+    return 100 - (100 / (1 + rs))
 
 def calculate_bollinger(series, window=20, num_std=2):
     ma = series.rolling(window).mean()
@@ -63,9 +62,9 @@ def calculate_atr(df, period=14):
     high_close = np.abs(df['High'] - df['Close'].shift(1))
     low_close = np.abs(df['Low'] - df['Close'].shift(1))
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    atr = tr.rolling(period).mean()
-    return atr
+    return tr.rolling(period).mean()
 
+# 수정된 calculate_adx 함수 (차원 문제 해결)
 def calculate_adx(df, period=14):
     high = df['High']
     low = df['Low']
@@ -95,18 +94,7 @@ def calculate_adx(df, period=14):
 
     return adx
 
-def calculate_macd(df, fast=12, slow=26, signal=9):
-    exp1 = df['Close'].ewm(span=fast, adjust=False).mean()
-    exp2 = df['Close'].ewm(span=slow, adjust=False).mean()
-    macd = exp1 - exp2
-    signal_line = macd.ewm(span=signal, adjust=False).mean()
-    histogram = macd - signal_line
-    return macd, signal_line, histogram
-
-def calculate_ema(series, period=50):
-    return series.ewm(span=period, adjust=False).mean()
-
-# --- 데이 트레이딩 점수 함수 ---
+# 점수 함수: 터틀 전략 + 보조지표 결합 + 진입/목표/손절가 계산
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -172,7 +160,7 @@ def score_turtle_enhanced(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# --- 스윙 트레이딩 점수 함수 ---
+# 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합)
 def score_swing_trading(df):
     if df is None or df.empty or len(df) < 50:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
@@ -227,6 +215,7 @@ def score_swing_trading(df):
     if not msgs:
         msgs = ["신호 없음"]
 
+    # ADX에 따라 진입, 손절, 목표가 비율 조정
     entry_price = close
     if adx > 30:
         target_price = close * 1.07
@@ -237,64 +226,7 @@ def score_swing_trading(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# --- 포지션 트레이딩 점수 함수 (Stan Weinstein 전략) ---
-def score_position_trading(df):
-    if df is None or df.empty or len(df) < 100:
-        return 0, "데이터가 충분하지 않습니다.", None, None, None
-
-    df = df.copy()
-    df['EMA_30'] = calculate_ema(df['Close'], 30)
-    df['EMA_50'] = calculate_ema(df['Close'], 50)
-    df['MACD'], df['Signal'], _ = calculate_macd(df)
-    df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
-
-    df.dropna(inplace=True)
-    if len(df) < 1:
-        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
-
-    close = float(df['Close'].iloc[-1])
-    ema30 = float(df['EMA_30'].iloc[-1])
-    ema50 = float(df['EMA_50'].iloc[-1])
-    macd = float(df['MACD'].iloc[-1])
-    signal = float(df['Signal'].iloc[-1])
-    bbw = float(df['BB_width'].iloc[-1])
-    bbw_mean = df['BB_width'].rolling(20).mean().iloc[-1]
-
-    score = 0
-    msgs = []
-
-    # 스탠 웨인스타인 기본 조건: EMA30 > EMA50 상승추세
-    if ema30 > ema50:
-        score += 40
-        msgs.append("EMA30 > EMA50 상승 추세")
-    else:
-        msgs.append("EMA30 <= EMA50 하락 또는 횡보")
-
-    # MACD 골든크로스 여부
-    if macd > signal:
-        score += 30
-        msgs.append("MACD 골든크로스")
-    else:
-        msgs.append("MACD 데드크로스")
-
-    # 볼린저 밴드 폭 축소 (수축기)
-    if bbw < bbw_mean * 0.8:
-        score += 20
-        msgs.append("볼린저 밴드 수축")
-    else:
-        msgs.append("볼린저 밴드 확장 또는 변동성 증가")
-
-    score = max(0, min(100, score))
-    if not msgs:
-        msgs = ["신호 없음"]
-
-    entry_price = close
-    target_price = close * 1.15
-    stop_loss = close * 0.90
-
-    return score, "; ".join(msgs), entry_price, target_price, stop_loss
-
-# --- UI 렌더링 ---
+# UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 분석해보세요.</p>", unsafe_allow_html=True)
 st.markdown("---")
@@ -318,6 +250,7 @@ with col1:
                     score, msg, entry, target, stop = score_turtle_enhanced(df)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
+
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -346,6 +279,7 @@ with col2:
                     score, msg, entry, target, stop = score_swing_trading(df_swing)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
+
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -358,34 +292,11 @@ with col2:
         st.markdown("</div>", unsafe_allow_html=True)
 
 with col3:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-desc'>Stan Weinstein 전략 + MACD, EMA, 볼린저 밴드</div>", unsafe_allow_html=True)
-        ticker_position = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_position")
-        if st.button("🔍 분석", key="btn_position"):
-            if not ticker_position.strip():
-                st.warning("티커를 입력하세요.")
-            else:
-                df_pos = yf.download(ticker_position, period="1y", interval="1d")
-                if df_pos.empty:
-                    st.error("데이터를 불러올 수 없습니다.")
-                else:
-                    score, msg, entry, target, stop = score_position_trading(df_pos)
-                    st.success(f"점수: {score} / 100")
-                    st.info(msg)
-                    if entry and target and stop:
-                        st.markdown(f"""
-                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-                        <strong>💡 자동 계산 진입/청산가:</strong><br>
-                        - 진입가: {entry:.2f}<br>
-                        - 목표가: {target:.2f}<br>
-                        - 손절가: {stop:.2f}
-                        </div>
-                        """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>3️⃣ 포지션 트레이딩</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-desc'>분석 준비 중...</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# 4,5번 미완성 상태 유지
 col4, col5,_ = st.columns([1,1,1])
 with col4:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
