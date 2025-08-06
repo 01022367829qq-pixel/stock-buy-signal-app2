@@ -329,8 +329,8 @@ if st.checkbox("지침 사항 보기", key="show_guideline"):
     st.markdown("""
     <div style="background-color:#222; padding:15px; border-radius:10px; margin-bottom:20px; color:#ccc;">
     - 본 앱은 투자 참고용입니다. 실제 투자 결정은 본인 책임입니다.<br>
-    - 실시간 데이터는 지연될 수 있으니 참고 바랍니다.<br>
-    - 개인 민감 정보는 입력하지 마세요.<br>
+    - 실시간 데이터는 1분 가량 지연될 수 있으니 참고 바랍니다.<br>
+    - 종목명을 검색하였을 때 점수가 60점 이상인 상황에서 들어가야 설명 그대로의 승률이 나옵니다.<br>
     - 문의사항은 인스타그램 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color:#90caf9;">@trade_vibes.kr</a> 로 연락 바랍니다.<br>
     </div>
     """, unsafe_allow_html=True)
