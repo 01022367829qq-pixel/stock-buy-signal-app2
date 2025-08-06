@@ -334,7 +334,7 @@ with col1:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_dt = "Richard Dennis의 추세추종 전략 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다."
+        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. 승률은 60%~70% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
         show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
         if show_desc_dt:
             st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
