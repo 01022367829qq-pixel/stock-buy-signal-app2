@@ -77,7 +77,7 @@ p, span, div, h1, h2, h3, h4, h5, h6 {
 """, unsafe_allow_html=True)
 
 
-# 지표 계산 함수들 (기존 함수 재활용)
+# 지표 계산 함수들
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -87,6 +87,7 @@ def calculate_rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
+
 def calculate_bollinger(series, window=20, num_std=2):
     ma = series.rolling(window).mean()
     std = series.rolling(window).std()
@@ -95,12 +96,14 @@ def calculate_bollinger(series, window=20, num_std=2):
     width = upper - lower
     return upper, lower, width
 
+
 def calculate_atr(df, period=14):
     high_low = df['High'] - df['Low']
     high_close = np.abs(df['High'] - df['Close'].shift(1))
     low_close = np.abs(df['Low'] - df['Close'].shift(1))
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     return tr.rolling(period).mean()
+
 
 def calculate_adx(df, period=14):
     high = df['High']
@@ -134,16 +137,24 @@ def calculate_adx(df, period=14):
 
     return adx
 
-# 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
+
+# 데이 트레이딩 점수 함수
 def score_turtle_enhanced(df):
-    if df is None or df.empty or len(df) < 60:
+    required_cols = ['High', 'Low', 'Close', 'Volume']
+    for col in required_cols:
+        if col not in df.columns:
+            return 0, f"데이터에 필수 컬럼 '{col}'이(가) 없습니다.", None, None, None
+    if df[required_cols].isnull().any().any():
+        return 0, "데이터에 결측치가 포함되어 있습니다.", None, None, None
+
+    if df.empty or len(df) < 60:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
-    df['10d_low']  = df['Low'].rolling(10).min().shift(1)
-    df['ATR']      = calculate_atr(df, 14)
-    df['RSI']      = calculate_rsi(df['Close'], 14)
+    df['10d_low'] = df['Low'].rolling(10).min().shift(1)
+    df['ATR'] = calculate_atr(df, 14)
+    df['RSI'] = calculate_rsi(df['Close'], 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
@@ -200,9 +211,17 @@ def score_turtle_enhanced(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합)
+
+# 스윙 트레이딩 점수 함수
 def score_swing_trading(df):
-    if df is None or df.empty or len(df) < 50:
+    required_cols = ['High', 'Low', 'Close', 'Volume']
+    for col in required_cols:
+        if col not in df.columns:
+            return 0, f"데이터에 필수 컬럼 '{col}'이(가) 없습니다.", None, None, None
+    if df[required_cols].isnull().any().any():
+        return 0, "데이터에 결측치가 포함되어 있습니다.", None, None, None
+
+    if df.empty or len(df) < 50:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
 
     df = df.copy()
@@ -265,9 +284,17 @@ def score_swing_trading(df):
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
-# 포지션 트레이딩 점수 함수 예시 (간단한 EMA, RSI, ATR 조합)
+
+# 포지션 트레이딩 점수 함수
 def score_position_trading(df):
-    if df is None or df.empty or len(df) < 50:
+    required_cols = ['High', 'Low', 'Close', 'Volume']
+    for col in required_cols:
+        if col not in df.columns:
+            return 0, f"데이터에 필수 컬럼 '{col}'이(가) 없습니다.", None, None, None
+    if df[required_cols].isnull().any().any():
+        return 0, "데이터에 결측치가 포함되어 있습니다.", None, None, None
+
+    if df.empty or len(df) < 50:
         return 0, "데이터가 충분하지 않습니다.", None, None, None
 
     df = df.copy()
@@ -289,14 +316,12 @@ def score_position_trading(df):
     score = 0
     msgs = []
 
-    # 장기 추세 판단
     if ema50 > ema200:
         score += 40
         msgs.append("EMA50 > EMA200: 상승 추세")
     else:
         msgs.append("EMA50 <= EMA200: 하락 추세")
 
-    # RSI 상태
     if rsi < 40:
         score += 10
         msgs.append(f"RSI({rsi:.1f}) 과매도 영역")
@@ -304,7 +329,6 @@ def score_position_trading(df):
         score -= 10
         msgs.append(f"RSI({rsi:.1f}) 과매수 영역")
 
-    # 최근 변동성
     if atr > df['ATR'].rolling(50).mean().iloc[-1]:
         score += 20
         msgs.append("ATR 증가: 변동성 확대")
@@ -314,10 +338,11 @@ def score_position_trading(df):
         msgs = ["신호 없음"]
 
     entry_price = close
-    target_price = close * 1.15  # 15% 목표가 예시
-    stop_loss = close - (atr * 2)  # ATR 2배 손절 예시
+    target_price = close * 1.15
+    stop_loss = close - (atr * 2)
 
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
+
 
 # UI 렌더링
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
@@ -343,13 +368,19 @@ with col1:
                 st.warning("티커를 입력하세요.")
             else:
                 df = yf.download(ticker, period="3mo", interval="1d")
+                required_cols = ['High', 'Low', 'Close', 'Volume']
+                missing_cols = [col for col in required_cols if col not in df.columns]
+
                 if df.empty:
                     st.error("데이터를 불러올 수 없습니다.")
+                elif missing_cols:
+                    st.error(f"필수 컬럼이 없습니다: {missing_cols}")
+                elif df[required_cols].isnull().any().any():
+                    st.error("데이터에 결측치가 있습니다.")
                 else:
                     score, msg, entry, target, stop = score_turtle_enhanced(df)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
-
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -378,13 +409,19 @@ with col2:
                 st.warning("티커를 입력하세요.")
             else:
                 df_swing = yf.download(ticker_swing, period="6mo", interval="1d")
+                required_cols = ['High', 'Low', 'Close', 'Volume']
+                missing_cols = [col for col in required_cols if col not in df_swing.columns]
+
                 if df_swing.empty:
                     st.error("데이터를 불러올 수 없습니다.")
+                elif missing_cols:
+                    st.error(f"필수 컬럼이 없습니다: {missing_cols}")
+                elif df_swing[required_cols].isnull().any().any():
+                    st.error("데이터에 결측치가 있습니다.")
                 else:
                     score, msg, entry, target, stop = score_swing_trading(df_swing)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
-
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -395,7 +432,6 @@ with col2:
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-
 
 with col3:
     with st.container():
@@ -403,24 +439,30 @@ with col3:
         st.markdown("""
 <div class='card-title'>
   3️⃣ 포지션 트레이딩
-  <span style="cursor: help;" title="EMA, RSI, ATR을 결합한 장기 투자 전략입니다.">ⓘ</span>
+  <span style="cursor: help;" title="EMA50/EMA200, RSI, ATR을 이용한 장기 투자용 전략입니다.">ⓘ</span>
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, EMA, RSI, ATR, 거래량 지표 결합</div>", unsafe_allow_html=True)
-        ticker_position = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_position")
-        if st.button("🔍 분석", key="btn_position"):
-            if not ticker_position.strip():
+        st.markdown("<div class='card-desc'>EMA50/EMA200 골든크로스 + RSI, ATR 활용</div>", unsafe_allow_html=True)
+        ticker_pos = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_pos")
+        if st.button("🔍 분석", key="btn_pos"):
+            if not ticker_pos.strip():
                 st.warning("티커를 입력하세요.")
             else:
-                df_pos = yf.download(ticker_position, period="1y", interval="1d")
+                df_pos = yf.download(ticker_pos, period="12mo", interval="1d")
+                required_cols = ['High', 'Low', 'Close', 'Volume']
+                missing_cols = [col for col in required_cols if col not in df_pos.columns]
+
                 if df_pos.empty:
                     st.error("데이터를 불러올 수 없습니다.")
+                elif missing_cols:
+                    st.error(f"필수 컬럼이 없습니다: {missing_cols}")
+                elif df_pos[required_cols].isnull().any().any():
+                    st.error("데이터에 결측치가 있습니다.")
                 else:
                     score, msg, entry, target, stop = score_position_trading(df_pos)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
-
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -431,28 +473,3 @@ with col3:
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-
-col4, col5, _ = st.columns([1,1,1])
-with col4:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>현재 개발 단계에 있습니다...</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-with col5:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>5️⃣ 뉴스 이벤트 트레이딩</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>현재 개발 단계에 있습니다...</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Made by Son Jiwan | Powered by Streamlit</p>", unsafe_allow_html=True)
-st.markdown(
-    """
-    <div style='text-align: center; margin-top: 50px; font-size: 14px; color: #bbbbbb;'>
-        💬 피드백은 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color: #90caf9; text-decoration: none;">
-        @trade_vibes.kr</a> 로 남겨주세요.
-    </div>
-    """,
-    unsafe_allow_html=True
-)
