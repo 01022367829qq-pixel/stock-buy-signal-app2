@@ -395,7 +395,7 @@ with col2:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_swing = "Tony Cruz의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 중기 매매 전략입니다. 승률은 55%~65% 가량 되며, 손익비는1.3~1.4:1 정도로 추정됩니다."
+        desc_text_swing = "Tony Cruz의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 중기 매매 전략입니다. (종목 평가 60점 이상 진입시) 승률은 55%~65% 가량 되며, 손익비는1.3~1.4:1 정도로 추정됩니다."
         show_desc_swing = st.checkbox("설명 보기", key="chk_desc_swing")
         if show_desc_swing:
             st.markdown(f"<div class='card-desc'>{desc_text_swing}</div>", unsafe_allow_html=True)
@@ -432,7 +432,7 @@ with col3:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_position = "Richard Dennis의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 장기 매매 전략입니다. 승률은 50%~60% 가량 되며, 손익비는 1.5~2:1로 추정됩니다."
+        desc_text_position = "Richard Dennis의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 장기 매매 전략입니다. (종목 평가 60점 이상 진입시) 승률은 50%~60% 가량 되며, 손익비는 1.5~2:1로 추정됩니다."
         show_desc_position = st.checkbox("설명 보기", key="chk_desc_position")
         if show_desc_position:
             st.markdown(f"<div class='card-desc'>{desc_text_position}</div>", unsafe_allow_html=True)
