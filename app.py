@@ -409,7 +409,11 @@ with col3:
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, EMA, RSI, ATR, 거래량 지표 결합</div>", unsafe_allow_html=True)
+        desc_text_position = "EMA, RSI, ATR을 결합한 장기 투자 전략입니다."
+        show_desc_position = st.checkbox("설명 보기", key="chk_desc_position")
+        if show_desc_position:
+            st.markdown(f"<div class='card-desc'>{desc_text_position}</div>", unsafe_allow_html=True)
+
         ticker_position = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_position")
         if st.button("🔍 분석", key="btn_position"):
             if not ticker_position.strip():
@@ -422,7 +426,6 @@ with col3:
                     score, msg, entry, target, stop = score_position_trading(df_pos)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
-
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -433,6 +436,7 @@ with col3:
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 col4, col5, _ = st.columns([1,1,1])
