@@ -402,7 +402,6 @@ with col3:
         st.markdown("""
 <div class='card-title'>
   3️⃣ 포지션 트레이딩
-  <span style="cursor: help;" title="EMA, RSI, ATR을 결합한 장기 투자 전략입니다.">ⓘ</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -430,6 +429,7 @@ with col3:
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
+
 
 col4, col5, _ = st.columns([1,1,1])
 with col4:
