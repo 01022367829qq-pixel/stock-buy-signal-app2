@@ -474,7 +474,12 @@ with col3:
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 # 상단 컬럼 선언부
-col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 1, 1])
+# 첫 줄: 3개 컬럼
+col1, col2, col3 = st.columns(3)
+
+# 두 번째 줄: 2개 컬럼
+col4, col5 = st.columns(2)
+
 
 # 이후에 4번째 카드
 with col4:
