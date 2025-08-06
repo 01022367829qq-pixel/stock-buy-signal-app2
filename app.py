@@ -493,6 +493,42 @@ with col5:
         st.markdown("<div class='card-desc'>현재 개발 단계에 있습니다...</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+# ... 기존 col4, col5 코드 끝난 뒤에
+
+st.markdown("<hr>", unsafe_allow_html=True)
+
+# 여기에 인스타그램 안내 카드 코드 삽입
+
+with st.container():
+    st.markdown("""
+    <div style="
+        background-color: #1e1e1e; 
+        padding: 15px; 
+        border-radius: 15px; 
+        box-shadow: 0 0 10px rgba(0,0,0,0.7); 
+        text-align: center;
+        max-width: 500px; 
+        margin: 0 auto 20px auto;
+        color: #bbbbbb;
+        font-size: 16px;
+    ">
+        📊 백테스트 결과는 인스타그램에서 확인하실 수 있습니다!<br>
+        <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" 
+           style="color: #90caf9; text-decoration: none; font-weight: bold;">
+           👉 @trade_vibes.kr 방문하기
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 하단 문구 (기존 코드)
+st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Made by Son Jiwan | Powered by Streamlit</p>", unsafe_allow_html=True)
+
+st.markdown("""
+<div style='text-align: center; margin-top: 50px; font-size: 14px; color: #bbbbbb;'>
+    💬 피드백은 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color: #90caf9; text-decoration: none;">
+    @trade_vibes.kr</a> 로 남겨주세요.
+</div>
+""", unsafe_allow_html=True)
 
 # 하단 문구
 st.markdown("<hr>", unsafe_allow_html=True)
