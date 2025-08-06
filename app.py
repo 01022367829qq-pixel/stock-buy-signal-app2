@@ -363,6 +363,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+
 st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, BB, ATR, 거래량 지표 결합</div>", unsafe_allow_html=True)
 ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
 if st.button("🔍 분석", key="btn_dt"):
