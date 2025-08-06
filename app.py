@@ -364,11 +364,20 @@ with col1:
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+  with col2:
+    with st.container():
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("""
+<div class='card-title'>
   2️⃣ 스윙 트레이딩
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("<div class='card-desc'>Tony Cruz의 전략 + RSI, BB, ADX, 거래량 지표 결합</div>", unsafe_allow_html=True)
+        desc_text_swing = "Tony Cruz 전략과 RSI, ADX, 볼린저 밴드, 거래량을 결합한 중기 매매 전략입니다."
+        show_desc_swing = st.checkbox("전략 설명 보기", key="show_desc_swing")
+        if show_desc_swing:
+            st.markdown(f"<div style='margin-bottom:10px; color:#555;'>{desc_text_swing}</div>", unsafe_allow_html=True)
+
         ticker_swing = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_swing")
         if st.button("🔍 분석", key="btn_swing"):
             if not ticker_swing.strip():
