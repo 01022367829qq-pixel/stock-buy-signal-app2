@@ -473,7 +473,10 @@ with col3:
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-# --- 4번째 카드: 스캘핑 --- #
+# 상단 컬럼 선언부
+col1, col2, col3, col4, col5 = st.columns(5)
+
+# 이후에 4번째 카드
 with col4:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -482,7 +485,6 @@ with col4:
 <span style="cursor: pointer;" title="빠른 매매를 위한 초단기 전략입니다.">ⓘ</span>
 </div>""", unsafe_allow_html=True)
 
-        # 설명란 토글용 변수 (원하는 설명 텍스트를 변수에 넣어주세요)
         scalping_desc = "스캘핑은 빠른 매매를 목표로 하는 초단기 전략입니다. 현재 기능 개발 중입니다."
 
         show_scalping_desc = st.checkbox("설명 보기", key="chk_scalping_desc")
@@ -499,7 +501,7 @@ with col4:
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-# --- 5번째 카드: 이벤트 트레이딩 --- #
+# 5번째 카드
 with col5:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
