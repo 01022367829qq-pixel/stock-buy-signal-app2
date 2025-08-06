@@ -320,6 +320,29 @@ def score_position_trading(df):
     return score, "; ".join(msgs), entry_price, target_price, stop_loss
 
 # UI 렌더링
+# ... (기존 함수 정의들 끝난 직후)
+
+# **여기에 아래 코드 추가**
+
+st.markdown("<h2 style='text-align:center; color:#90caf9;'>📋 앱 사용 전 지침 사항</h2>", unsafe_allow_html=True)
+if st.checkbox("지침 사항 보기", key="show_guideline"):
+    st.markdown("""
+    <div style="background-color:#222; padding:15px; border-radius:10px; margin-bottom:20px; color:#ccc;">
+    - 본 앱은 투자 참고용입니다. 실제 투자 결정은 본인 책임입니다.<br>
+    - 실시간 데이터는 지연될 수 있으니 참고 바랍니다.<br>
+    - 개인 민감 정보는 입력하지 마세요.<br>
+    - 문의사항은 인스타그램 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color:#90caf9;">@trade_vibes.kr</a> 로 연락 바랍니다.<br>
+    </div>
+    """, unsafe_allow_html=True)
+
+# --- 그리고 기존 UI 시작 ---
+
+st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 모두 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
+st.markdown("---")
+
+# 이하 기존 col1, col2, col3 ... 계속
+
 st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 모두 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
 st.markdown("---")
