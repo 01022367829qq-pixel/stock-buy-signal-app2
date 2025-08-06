@@ -363,15 +363,6 @@ with col1:
 import streamlit as st
 import yfinance as yf
 
-st.markdown("""
-<div style='font-weight:bold; font-size:20px;'>
-1️⃣ 데이 트레이딩
-<span style='cursor: help;' title='Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다.'>ⓘ</span>
-</div>
-""", unsafe_allow_html=True)
-
-desc_text_dt = "Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다."
-
 show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
 if show_desc_dt:
     st.markdown(f"<div style='margin-top:5px; margin-bottom:10px; font-size:small; color:#555;'>{desc_text_dt}</div>", unsafe_allow_html=True)
