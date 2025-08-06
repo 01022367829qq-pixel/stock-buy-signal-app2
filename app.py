@@ -372,7 +372,7 @@ with col2:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_swing = "Tony Cruz 전략과 RSI, ADX, 볼린저 밴드, 거래량을 결합한 중기 매매 전략입니다."
+        desc_text_swing = "Tony Cruz의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 중기 매매 전략입니다. 승률은 55%~65% 가량 되며, 손익비는1.3~1.4:1 정도로 추정됩니다."
         show_desc_swing = st.checkbox("설명 보기", key="chk_desc_swing")
         if show_desc_swing:
             st.markdown(f"<div class='card-desc'>{desc_text_swing}</div>", unsafe_allow_html=True)
