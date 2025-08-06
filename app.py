@@ -362,6 +362,12 @@ with col1:
 """, unsafe_allow_html=True)
 
         st.markdown("<div class='card-desc'>Richard Dennis의 전략 + RSI, BB, ATR, 거래량 지표 결합</div>", unsafe_allow_html=True)
+
+desc_text_dt = "Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다."
+show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
+if show_desc_dt:
+    st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
+
         ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
         if st.button("🔍 분석", key="btn_dt"):
             if not ticker.strip():
