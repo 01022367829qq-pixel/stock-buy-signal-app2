@@ -325,15 +325,7 @@ st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종
 st.markdown("---")
 
 col1, col2, col3 = st.columns(3)
-
-
-
-
-
-with col1:  
-
-
-    
+with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("""
@@ -342,10 +334,10 @@ with col1:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text = "Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다."
-        show_desc = st.checkbox("전략 설명 보기", key="show_desc_dt")
-        if show_desc:
-            st.markdown(f"<div style='margin-bottom:10px; color:#555;'>{desc_text}</div>", unsafe_allow_html=True)
+        desc_text_dt = "Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다."
+        show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
+        if show_desc_dt:
+            st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
 
         ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
         if st.button("🔍 분석", key="btn_dt"):
@@ -359,7 +351,6 @@ with col1:
                     score, msg, entry, target, stop = score_turtle_enhanced(df)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
-
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -372,13 +363,7 @@ with col1:
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-
-
-  with col2:
-
-
-
-      
+with col2:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("""
@@ -388,9 +373,9 @@ with col1:
 """, unsafe_allow_html=True)
 
         desc_text_swing = "Tony Cruz 전략과 RSI, ADX, 볼린저 밴드, 거래량을 결합한 중기 매매 전략입니다."
-        show_desc_swing = st.checkbox("전략 설명 보기", key="show_desc_swing")
+        show_desc_swing = st.checkbox("설명 보기", key="chk_desc_swing")
         if show_desc_swing:
-            st.markdown(f"<div style='margin-bottom:10px; color:#555;'>{desc_text_swing}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='card-desc'>{desc_text_swing}</div>", unsafe_allow_html=True)
 
         ticker_swing = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_swing")
         if st.button("🔍 분석", key="btn_swing"):
@@ -404,7 +389,6 @@ with col1:
                     score, msg, entry, target, stop = score_swing_trading(df_swing)
                     st.success(f"점수: {score} / 100")
                     st.info(msg)
-
                     if entry and target and stop:
                         st.markdown(f"""
                         <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
@@ -415,7 +399,6 @@ with col1:
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-
 
 with col3:
     with st.container():
