@@ -409,7 +409,7 @@ with col3:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_position = "EMA, RSI, ATR을 결합한 장기 투자 전략입니다."
+        desc_text_position = "Richard Dennis의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 장기 매매 전략입니다. 승률은 50%~60% 가량 되며, 손익비는 1.5~2:1로 추정됩니다."
         show_desc_position = st.checkbox("설명 보기", key="chk_desc_position")
         if show_desc_position:
             st.markdown(f"<div class='card-desc'>{desc_text_position}</div>", unsafe_allow_html=True)
