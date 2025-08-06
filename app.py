@@ -367,7 +367,6 @@ with col2:
         st.markdown("""
 <div class='card-title'>
   2️⃣ 스윙 트레이딩
-  <span style="cursor: help;" title="Tony Cruz 전략과 RSI, ADX, 볼린저 밴드, 거래량을 결합한 중기 매매 전략입니다.">ⓘ</span>
 </div>
 """, unsafe_allow_html=True)
 
