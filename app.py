@@ -443,8 +443,21 @@ col4, col5, _ = st.columns([1,1,1])
 with col4:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>현재 개발 단계에 있습니다...</div>", unsafe_allow_html=True)
+
+    show_info = st.checkbox("📘 전략 설명 보기", key="scalping_info")
+
+    if show_info:
+        st.markdown("""
+        <div class='card-desc'>
+        스캘핑은 초단타 매매 전략으로, 수초에서 수분 단위의 빠른 거래를 통해 소폭의 수익을 반복적으로 얻는 전략입니다.<br>
+        주로 고빈도 지표와 빠른 매수/매도 신호가 핵심이며, 리스크 관리가 매우 중요합니다.
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='card-desc'>현재 개발 단계에 있습니다...</div>", unsafe_allow_html=True)
+
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 with col5:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
