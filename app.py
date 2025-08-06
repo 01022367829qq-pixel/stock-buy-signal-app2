@@ -444,7 +444,7 @@ with col4:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>4️⃣ 스캘핑</div>", unsafe_allow_html=True)
 
-    show_info = st.checkbox("📘 전략 설명 보기", key="scalping_info")
+    show_info = st.checkbox("설명 보기", key="scalping_info")
 
     if show_info:
         st.markdown("""
