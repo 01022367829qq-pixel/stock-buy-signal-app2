@@ -473,3 +473,40 @@ with col3:
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
+ 4️⃣ 스캘핑
+  <span style="cursor: pointer;" title="빠른 매매를 위한 초단기 전략입니다.">ⓘ</span>
+</div>
+""", unsafe_allow_html=True)
+        # 설명란 토글
+        show_scalping_desc = st.checkbox("설명 보기", key="chk_scalping_desc")
+        if show_scalping_desc:
+            st.markdown(f"<div class='card-desc'>{scalping_desc}</div>", unsafe_allow_html=True)
+        # 티커 입력 및 분석 버튼 (아직 구현 안 됐으니 안내 메시지)
+        ticker_scalp = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_scalp")
+        if st.button("🔍 분석", key="btn_scalp"):
+            if not ticker_scalp.strip():
+                st.warning("티커를 입력하세요.")
+            else:
+                st.info("스캘핑 분석 기능은 현재 준비 중입니다.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# --- 5번째 카드: 이벤트 트레이딩 --- #
+with col5:
+    with st.container():
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("""
+<div class='card-title'>
+  5️⃣ 이벤트 트레이딩
+  <span style="cursor: pointer;" title="주요 이벤트 기반 매매 전략입니다.">ⓘ</span>
+</div>
+""", unsafe_allow_html=True)
+        show_event_desc = st.checkbox("설명 보기", key="chk_event_desc")
+        if show_event_desc:
+            st.markdown(f"<div class='card-desc'>{event_trading_desc}</div>", unsafe_allow_html=True)
+        ticker_event = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_event")
+        if st.button("🔍 분석", key="btn_event"):
+            if not ticker_event.strip():
+                st.warning("티커를 입력하세요.")
+            else:
+                st.info("이벤트 트레이딩 분석 기능은 현재 준비 중입니다.")
+        st.markdown("</div>", unsafe_allow_html=True)
