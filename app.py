@@ -326,7 +326,14 @@ st.markdown("---")
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
+
+
+
+
+with col1:  
+
+
+    
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("""
@@ -364,7 +371,14 @@ with col1:
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+
+
+
   with col2:
+
+
+
+      
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("""
