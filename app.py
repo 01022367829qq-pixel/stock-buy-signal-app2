@@ -368,35 +368,36 @@ show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
 if show_desc_dt:
     st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
 
-        ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
-        if st.button("🔍 분석", key="btn_dt"):
-            if not ticker.strip():
-                st.warning("티커를 입력하세요.")
-            else:
-                df = yf.download(ticker, period="3mo", interval="1d")
-                required_cols = ['High', 'Low', 'Close', 'Volume']
-                missing_cols = [col for col in required_cols if col not in df.columns]
+ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
+if st.button("🔍 분석", key="btn_dt"):
+    if not ticker.strip():
+        st.warning("티커를 입력하세요.")
+    else:
+        df = yf.download(ticker, period="3mo", interval="1d")
+        required_cols = ['High', 'Low', 'Close', 'Volume']
+        missing_cols = [col for col in required_cols if col not in df.columns]
 
-                if df.empty:
-                    st.error("데이터를 불러올 수 없습니다.")
-                elif missing_cols:
-                    st.error(f"필수 컬럼이 없습니다: {missing_cols}")
-                elif df[required_cols].isnull().any().any():
-                    st.error("데이터에 결측치가 있습니다.")
-                else:
-                    score, msg, entry, target, stop = score_turtle_enhanced(df)
-                    st.success(f"점수: {score} / 100")
-                    st.info(msg)
-                    if entry and target and stop:
-                        st.markdown(f"""
-                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-                        <strong>💡 자동 계산 진입/청산가:</strong><br>
-                        - 진입가: {entry:.2f}<br>
-                        - 목표가: {target:.2f}<br>
-                        - 손절가: {stop:.2f}
-                        </div>
-                        """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        if df.empty:
+            st.error("데이터를 불러올 수 없습니다.")
+        elif missing_cols:
+            st.error(f"필수 컬럼이 없습니다: {missing_cols}")
+        elif df[required_cols].isnull().any().any():
+            st.error("데이터에 결측치가 있습니다.")
+        else:
+            score, msg, entry, target, stop = score_turtle_enhanced(df)
+            st.success(f"점수: {score} / 100")
+            st.info(msg)
+            if entry and target and stop:
+                st.markdown(f"""
+                <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
+                <strong>💡 자동 계산 진입/청산가:</strong><br>
+                - 진입가: {entry:.2f}<br>
+                - 목표가: {target:.2f}<br>
+                - 손절가: {stop:.2f}
+                </div>
+                """, unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
+
 
 with col2:
     with st.container():
