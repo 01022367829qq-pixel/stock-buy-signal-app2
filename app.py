@@ -461,13 +461,26 @@ with col4:
 with col5:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='card-title'>5️⃣ 뉴스 이벤트 트레이딩</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-desc'>현재 개발 단계에 있습니다...</div>", unsafe_allow_html=True)
+
+    if st.checkbox("📘 뉴스 이벤트 트레이딩 전략 설명 보기", key="desc_news_event"):
+        st.markdown("""
+        <div class='card-desc'>
+        조지 소로스가 대표적인 인물로, 정치·경제 뉴스 발표 전후의 시장 반응을 이용한 전략입니다.<br><br>
+        예) 1992년 '블랙 웬즈데이'에 파운드화를 공매도하여 단 하루만에 10억 달러 이상의 수익을 냈습니다.<br><br>
+        - 뉴스 이벤트 발표 전 불균형 포착<br>
+        - 중앙은행, 정치 이슈 등 거시 변수 이용<br>
+        - 예상 외 뉴스 발생 시 빠르게 포지션 대응
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='card-desc'>현재 개발 단계에 있습니다...</div>", unsafe_allow_html=True)
+
     st.markdown("</div>", unsafe_allow_html=True)
 
+# 하단 문구는 그대로 유지
 st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Made by Son Jiwan | Powered by Streamlit</p>", unsafe_allow_html=True)
-st.markdown(
-    """
+
     <div style='text-align: center; margin-top: 50px; font-size: 14px; color: #bbbbbb;'>
         💬 피드백은 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color: #90caf9; text-decoration: none;">
         @trade_vibes.kr</a> 로 남겨주세요.
