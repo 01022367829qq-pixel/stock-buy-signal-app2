@@ -360,13 +360,21 @@ with col1:
   <span style="cursor: help;" title="Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다.">ⓘ</span>
 </div>
 """, unsafe_allow_html=True)
+import streamlit as st
+import yfinance as yf
+
+st.markdown("""
+<div style='font-weight:bold; font-size:20px;'>
+1️⃣ 데이 트레이딩
+<span style='cursor: help;' title='Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다.'>ⓘ</span>
+</div>
+""", unsafe_allow_html=True)
+
 desc_text_dt = "Richard Dennis의 추세추종 전략 기반으로 RSI, 볼린저 밴드, 거래량, ATR을 활용한 단기 매매 전략입니다."
+
 show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
 if show_desc_dt:
-    st.markdown(
-        f"<div style='margin-top:5px; margin-bottom:5px; font-size:small;'>{desc_text_dt}</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"<div style='margin-top:5px; margin-bottom:10px; font-size:small; color:#555;'>{desc_text_dt}</div>", unsafe_allow_html=True)
 
 col_input, col_button = st.columns([3, 1])
 with col_input:
@@ -377,30 +385,12 @@ with col_button:
             st.warning("티커를 입력하세요.")
         else:
             df = yf.download(ticker, period="3mo", interval="1d")
-            required_cols = ['High', 'Low', 'Close', 'Volume']
-            missing_cols = [col for col in required_cols if col not in df.columns]
-
             if df.empty:
                 st.error("데이터를 불러올 수 없습니다.")
-            elif missing_cols:
-                st.error(f"필수 컬럼이 없습니다: {missing_cols}")
-            elif df[required_cols].isnull().any().any():
-                st.error("데이터에 결측치가 있습니다.")
             else:
-                score, msg, entry, target, stop = score_turtle_enhanced(df)
-                st.success(f"점수: {score} / 100")
-                st.info(msg)
-                if entry and target and stop:
-                    st.markdown(f"""
-                    <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-                    <strong>💡 자동 계산 진입/청산가:</strong><br>
-                    - 진입가: {entry:.2f}<br>
-                    - 목표가: {target:.2f}<br>
-                    - 손절가: {stop:.2f}
-                    </div>
-                    """, unsafe_allow_html=True)
+                st.success(f"{ticker} 데이터 불러오기 성공!")
 
-st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("<hr>", unsafe_allow_html=True)
 
 with col2:
     with st.container():
