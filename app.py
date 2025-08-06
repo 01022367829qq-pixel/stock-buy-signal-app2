@@ -449,8 +449,7 @@ with col4:
     if show_info:
         st.markdown("""
         <div class='card-desc'>
-        스캘핑은 초단타 매매 전략으로, 수초에서 수분 단위의 빠른 거래를 통해 소폭의 수익을 반복적으로 얻는 전략입니다.<br>
-        주로 고빈도 지표와 빠른 매수/매도 신호가 핵심이며, 리스크 관리가 매우 중요합니다.
+        스캘핑 전략은 현재 개발 단계에 있으며 Paul Rotter의 The Flipper 전략을 구현 중입니다.
         </div>
         """, unsafe_allow_html=True)
     else:
