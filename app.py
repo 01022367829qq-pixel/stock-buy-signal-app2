@@ -512,7 +512,7 @@ with st.container():
         color: #bbbbbb;
         font-size: 16px;
     ">
-        📊 백테스트 결과는 인스타그램에서 확인하실 수 있습니다!<br>
+        📊 각 전략별 테스트 투자 결과는 인스타그램에서 확인하실 수 있습니다!<br>
         <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" 
            style="color: #90caf9; text-decoration: none; font-weight: bold;">
            👉 @trade_vibes.kr 방문하기
