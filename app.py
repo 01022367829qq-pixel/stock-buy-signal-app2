@@ -322,19 +322,88 @@ def score_position_trading(df):
 # UI 렌더링
 # ... (기존 함수 정의들 끝난 직후)
 
-# **여기에 아래 코드 추가**
+def calculate_rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
 
-st.markdown("<h2 style='text-align:center; color:#90caf9;'>📋 앱 사용 전 지침 사항</h2>", unsafe_allow_html=True)
-if st.checkbox("지침 사항 보기", key="show_guideline"):
-    st.markdown("""
-    <div style="background-color:#222; padding:15px; border-radius:10px; margin-bottom:20px; color:#ccc;">
-    - 종목 평가 점수가 낮을시에 진입 하는것은 도박에 가깝습니다!! 지침 사항에 따라 종목 평가 점수가 60점 이상인 상황에서 들어가야 안전합니다.
-    - 본 앱은 투자 참고용입니다. 실제 투자 결정은 본인 책임입니다.<br>
-    - 실시간 데이터는 1분 가량 지연될 수 있으니 참고 바랍니다.<br>
-    - 종목명을 검색하였을 때 종목 평가 점수가 60점 이상인 상황에서 들어가야 설명 그대로의 승률이 나옵니다.<br>
-    - 문의사항은 인스타그램 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color:#90caf9;">@trade_vibes.kr</a> 로 연락 바랍니다.<br>
-    </div>
-    """, unsafe_allow_html=True)
+def calculate_bollinger(series, window=20, num_std=2):
+    ma = series.rolling(window).mean()
+    std = series.rolling(window).std()
+    upper = ma + num_std * std
+    lower = ma - num_std * std
+    width = upper - lower
+    return upper, lower, width
+
+def calculate_atr(df, period=14):
+    high_low = df['High'] - df['Low']
+    high_close = np.abs(df['High'] - df['Close'].shift(1))
+    low_close = np.abs(df['Low'] - df['Close'].shift(1))
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    return tr.rolling(period).mean()
+
+def calculate_adx(df, period=14):
+    high = df['High']
+    low = df['Low']
+    close = df['Close']
+
+    plus_dm = high.diff()
+    minus_dm = low.diff()
+
+    plus_dm_values = plus_dm.values
+    minus_dm_values = minus_dm.values
+
+    plus_dm_adj = np.where((plus_dm_values > minus_dm_values) & (plus_dm_values > 0), plus_dm_values, 0).flatten()
+    minus_dm_adj = np.where((minus_dm_values > plus_dm_values) & (minus_dm_values > 0), minus_dm_values, 0).flatten()
+
+    tr = pd.concat([
+        high - low,
+        (high - close.shift(1)).abs(),
+        (low - close.shift(1)).abs()
+    ], axis=1).max(axis=1)
+
+    atr = tr.rolling(period).mean()
+
+    plus_di = 100 * (pd.Series(plus_dm_adj, index=df.index).rolling(period).mean() / atr)
+    minus_di = 100 * (pd.Series(minus_dm_adj, index=df.index).rolling(period).mean() / atr)
+
+    dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+    adx = dx.rolling(period).mean()
+
+    adx = adx.fillna(method='bfill').fillna(method='ffill')
+
+    return adx
+
+# 점수 계산 함수들 (예시, 실제 로직은 사용자 코드로 교체)
+def score_turtle_enhanced(df):
+    # 실제 구현은 여기에...
+    return 0, "샘플 메시지", None, None, None
+
+def score_swing_trading(df):
+    # 실제 구현은 여기에...
+    return 0, "샘플 메시지", None, None, None
+
+def score_position_trading(df):
+    # 실제 구현은 여기에...
+    return 0, "샘플 메시지", None, None, None
+
+# UI 코드 전체를 main() 함수에 넣음
+def main():
+    st.markdown("<h2 style='text-align:center; color:#90caf9;'>📋 앱 사용 전 지침 사항</h2>", unsafe_allow_html=True)
+    if st.checkbox("지침 사항 보기", key="show_guideline"):
+        st.markdown("""
+        <div style="background-color:#222; padding:15px; border-radius:10px; margin-bottom:20px; color:#ccc;">
+        - 종목 평가 점수가 낮을시에 진입 하는것은 도박에 가깝습니다!! 지침 사항에 따라 종목 평가 점수가 60점 이상인 상황에서 들어가야 안전합니다.
+        - 본 앱은 투자 참고용입니다. 실제 투자 결정은 본인 책임입니다.<br>
+        - 실시간 데이터는 1분 가량 지연될 수 있으니 참고 바랍니다.<br>
+        - 종목명을 검색하였을 때 종목 평가 점수가 60점 이상인 상황에서 들어가야 설명 그대로의 승률이 나옵니다.<br>
+        - 문의사항은 인스타그램 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color:#90caf9;">@trade_vibes.kr</a> 로 연락 바랍니다.<br>
+        </div>
+        """, unsafe_allow_html=True)
 
 # --- 그리고 기존 UI 시작 ---
 
