@@ -22,21 +22,38 @@ html, body, [class^="css"], .main, section, div[data-testid="stAppViewContainer"
     margin-top: -70px;
 }
 
-/* 카드 스타일 */
-.card {
-    background-color: #1e1e1e !important;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
-    text-align: center;
-    transition: transform 0.2s;
-    height: 100%;
-    margin-bottom: 20px;
-}
-.card:hover {
-    transform: scale(1.02);
-    background-color: #333333 !important;
-}
+# 스타일 적용
+st.markdown("""
+    <style>
+        .main {background-color: #f9f9f9;}
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            padding-left: 3rem;
+            padding-right: 3rem;
+        }
+        .card {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease-in-out;
+        }
+        .card:hover {
+            box-shadow: 0px 6px 16px rgba(0,0,0,0.1);
+        }
+        .title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .sub {
+            color: gray;
+            font-size: 0.9rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 
 /* 카드 제목 */
 .card-title {
