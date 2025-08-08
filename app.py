@@ -289,7 +289,10 @@ def score_swing_trading(df):
         target_price = close * 1.10
         stop_loss = close * 0.90
 
-    return score, msgs, entry_price, target_price, stop_loss
+  recommendation = get_recommendation(score)
+
+return score, msgs, entry_price, target_price, stop_loss, recommendation
+
 
 
 # 포지션 트레이딩 점수 함수 예시 (간단한 EMA, RSI, ATR 조합)
