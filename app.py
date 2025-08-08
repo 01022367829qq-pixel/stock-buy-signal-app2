@@ -351,17 +351,6 @@ col1, col2, col3 = st.columns(3)
 with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("""
-<div class='card-title'>
-st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 모두 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
-st.markdown("---")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
 
         desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종목 평가 60점 이상 진입시)승률은 60%~70% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
@@ -391,18 +380,13 @@ with col1:
 </div>
 """, unsafe_allow_html=True)
 
-
                         # 차트 생성 및 표시
                         chart_path = plot_candlestick_chart_with_lines(df, entry, stop, target)
                         st.image(chart_path, use_column_width=True)
                         os.remove(chart_path)
+
         st.markdown("</div>", unsafe_allow_html=True)
 
-with col2:
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("""
-<div class='card-title'>
   2️⃣ 스윙 트레이딩
 </div>
 """, unsafe_allow_html=True)
