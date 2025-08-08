@@ -137,7 +137,7 @@ def calculate_adx(df, period=14):
 # 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
-        return 0, ["데이터가 충분하지 않습니다."], None, None, None
+        return 0, ["데이터가 충분하지 않습니다."], None, None, None, "분석할 데이터가 부족합니다."
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
@@ -150,7 +150,7 @@ def score_turtle_enhanced(df):
 
     df.dropna(inplace=True)
     if len(df) < 1:
-        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
+        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None, "기술 지표 계산 오류"
 
     close = float(df['Close'].iloc[-1])
     high20 = float(df['20d_high'].iloc[-1])
@@ -164,7 +164,7 @@ def score_turtle_enhanced(df):
 
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
-            return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
+            return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None, "기술 지표 계산 오류"
 
     score = 0
     msgs = []
@@ -198,7 +198,9 @@ def score_turtle_enhanced(df):
     target_price = close + (atr_val * 2)
     stop_loss = close - (atr_val * 1.5)
 
-    return score, msgs, entry_price, target_price, stop_loss
+    recommendation = get_recommendation(score)
+
+    return score, msgs, entry_price, target_price, stop_loss, recommendation
 
 
 
