@@ -1,5 +1,4 @@
 import streamlit as st
-import plotly.graph_objects as go
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -329,10 +328,10 @@ st.markdown("<h2 style='text-align:center; color:#90caf9;'>📋 앱 사용 전 �
 if st.checkbox("지침 사항 보기", key="show_guideline"):
     st.markdown("""
     <div style="background-color:#222; padding:15px; border-radius:10px; margin-bottom:20px; color:#ccc;">
-    - 종목 평가 점수가 낮을시에 진입 하는것은 도박에 가깝습니다.<br>
+    - 종목 평가 점수가 낮을시에 진입 하는것은 도박에 가깝습니다!! 지침 사항에 따라 종목 평가 점수가 60점 이상인 상황에서 들어가야 안전합니다.
     - 본 앱은 투자 참고용입니다. 실제 투자 결정은 본인 책임입니다.<br>
     - 실시간 데이터는 1분 가량 지연될 수 있으니 참고 바랍니다.<br>
-    - 종목 평가 점수가 60점 이상인 상황에서 들어가야 안전합니다.<br>
+    - 종목명을 검색하였을 때 종목 평가 점수가 60점 이상인 상황에서 들어가야 설명 그대로의 승률이 나옵니다.<br>
     - 문의사항은 인스타그램 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color:#90caf9;">@trade_vibes.kr</a> 로 연락 바랍니다.<br>
     </div>
     """, unsafe_allow_html=True)
@@ -498,19 +497,26 @@ with col5:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# 여기에 인스타그램 안내 카드 코드 삽입
-# ----------- 주가 차트 시각화 시작 -----------
+import yfinance as yf
+import plotly.graph_objects as go
+import streamlit as st
 
+# ✅ 티커 입력
+ticker = st.text_input("📌 분석할 주식 티커를 입력하세요 (예: AAPL)", value="AAPL").upper()
+
+# 📊 데이터 다운로드 함수 (캐싱 포함)
+@st.cache_data(ttl=3600)
 def get_stock_data(ticker):
     df = yf.download(ticker, period="6mo", interval="1d")
     df['EMA20'] = df['Close'].ewm(span=20).mean()
     df['EMA60'] = df['Close'].ewm(span=60).mean()
     return df
 
+# 📈 캔들차트 + EMA 차트
 def plot_candlestick_chart(df):
     fig = go.Figure()
 
-    # 📈 EMA 선 먼저 추가 (배경으로 깔림)
+    # EMA 선
     fig.add_trace(go.Scatter(
         x=df.index, y=df['EMA20'],
         mode='lines', name='EMA20', line=dict(color='blue', width=1)
@@ -520,7 +526,7 @@ def plot_candlestick_chart(df):
         mode='lines', name='EMA60', line=dict(color='orange', width=1)
     ))
 
-    # 🕯️ 마지막에 캔들차트 추가 (위에 표시되도록)
+    # 캔들차트
     fig.add_trace(go.Candlestick(
         x=df.index,
         open=df['Open'],
@@ -540,19 +546,21 @@ def plot_candlestick_chart(df):
 
     return fig
 
-# ✅ Streamlit에서 차트 출력
-st.subheader("📉 주가 차트 보기 (캔들차트 전용)")
+# 📊 차트 출력
+st.subheader("📉 주가 차트 보기 (캔들차트 + 이동평균선)")
 
 if ticker:
     try:
         df = get_stock_data(ticker)
-        chart_fig = plot_candlestick_chart(df)
-        st.plotly_chart(chart_fig, use_container_width=True)
+        if df.empty:
+            st.warning("데이터가 존재하지 않습니다. 올바른 티커인지 확인해주세요.")
+        else:
+            chart_fig = plot_candlestick_chart(df)
+            st.plotly_chart(chart_fig, use_container_width=True)
     except Exception as e:
         st.error(f"차트를 불러오는 중 오류가 발생했습니다: {e}")
 
-# ----------- 주가 차트 시각화 끝 -----------
-
+# 여기에 인스타그램 안내 카드 코드 삽입
 
 with st.container():
     st.markdown("""
