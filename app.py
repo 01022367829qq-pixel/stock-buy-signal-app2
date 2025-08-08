@@ -135,47 +135,9 @@ def calculate_adx(df, period=14):
     return adx
 
 # 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
-import numpy as np
-
-def calculate_atr(df, period=14):
-    # ATR 계산 코드 (예시)
-    high_low = df['High'] - df['Low']
-    high_close = np.abs(df['High'] - df['Close'].shift())
-    low_close = np.abs(df['Low'] - df['Close'].shift())
-    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    atr = tr.rolling(period).mean()
-    return atr
-
-def calculate_rsi(series, period=14):
-    # RSI 계산 코드 (예시)
-    delta = series.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    rs = gain / loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
-
-def calculate_bollinger(series, period=20, std_dev=2):
-    sma = series.rolling(period).mean()
-    std = series.rolling(period).std()
-    upper = sma + std_dev * std
-    lower = sma - std_dev * std
-    width = (upper - lower) / sma
-    return upper, lower, width
-
-def get_recommendation(score):
-    if score < 30:
-        return "현재 조건은 매수하기에 적합하지 않습니다."
-    elif score < 60:
-        return "신중한 접근이 필요합니다. 추가 확인 후 매수하세요."
-    elif score < 80:
-        return "매수 조건이 양호합니다. 진입을 고려해보세요."
-    else:
-        return "강력한 매수 신호입니다! 진입 추천드립니다."
-
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
-        return 0, ["데이터가 충분하지 않습니다."], None, None, None, "분석할 데이터가 부족합니다."
+        return 0, ["데이터가 충분하지 않습니다."], None, None, None
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
@@ -188,7 +150,7 @@ def score_turtle_enhanced(df):
 
     df.dropna(inplace=True)
     if len(df) < 1:
-        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None, "기술 지표 계산 오류"
+        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
 
     close = float(df['Close'].iloc[-1])
     high20 = float(df['20d_high'].iloc[-1])
@@ -202,7 +164,7 @@ def score_turtle_enhanced(df):
 
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
-            return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None, "기술 지표 계산 오류"
+            return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
 
     score = 0
     msgs = []
@@ -232,16 +194,11 @@ def score_turtle_enhanced(df):
     if not msgs:
         msgs = ["신호 없음"]
 
-    recommendation = get_recommendation(score)
-
     entry_price = close
     target_price = close + (atr_val * 2)
     stop_loss = close - (atr_val * 1.5)
 
-    return score, msgs, entry_price, target_price, stop_loss, recommendation
-
-# 최상위 레벨에서 함수 호출
-score, msgs, entry, target, stop, rec = score_turtle_enhanced(df)
+    return score, msgs, entry_price, target_price, stop_loss
 
 
 
@@ -320,10 +277,7 @@ def score_swing_trading(df):
         target_price = close * 1.10
         stop_loss = close * 0.90
 
-  recommendation = get_recommendation(score)
-
-return score, msgs, entry_price, target_price, stop_loss, recommendation
-
+    return score, msgs, entry_price, target_price, stop_loss
 
 
 # 포지션 트레이딩 점수 함수 예시 (간단한 EMA, RSI, ATR 조합)
