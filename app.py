@@ -16,6 +16,34 @@ st.markdown("""
             background-color: #121212;
             color: #ffffff;
         }
+import streamlit as st
+
+# 페이지 설정
+st.set_page_config(layout="wide")
+
+# 다크 테마 배경 CSS
+dark_theme_css = """
+<style>
+/* 전체 배경 색상 변경 */
+body, .stApp {
+    background-color: #121212 !important;
+}
+
+/* 사이드바 배경 */
+[data-testid="stSidebar"] {
+    background-color: #1e1e1e !important;
+}
+
+/* 카드 영역 및 기타 텍스트 색상 보정 */
+html, body, [class*="css"]  {
+    color: #f0f0f0;
+    background-color: #121212;
+}
+</style>
+"""
+
+# CSS 삽입
+st.markdown(dark_theme_css, unsafe_allow_html=True)
 
         /* 전체 앱 영역 배경 설정 */
         .main {
