@@ -497,68 +497,49 @@ with col5:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-import yfinance as yf
-import plotly.graph_objects as go
-import streamlit as st
+# 📍 col1, col2, col3, col4, col5 카드 UI가 끝난 직후 아래 코드 삽입
 
-# ✅ 티커 입력
-ticker = st.text_input("📌 분석할 주식 티커를 입력하세요 (예: AAPL)", value="AAPL").upper()
+# 캔들 차트 + EMA 시각화 (카드 아래에 붙이세요)
+if ticker_input:
+    df = yf.download(ticker_input, period="3mo", interval="1d")
+    df.dropna(inplace=True)
 
-# 📊 데이터 다운로드 함수 (캐싱 포함)
-@st.cache_data(ttl=3600)
-def get_stock_data(ticker):
-    df = yf.download(ticker, period="6mo", interval="1d")
-    df['EMA20'] = df['Close'].ewm(span=20).mean()
-    df['EMA60'] = df['Close'].ewm(span=60).mean()
-    return df
+    if len(df) > 0:
+        df["EMA20"] = df["Close"].ewm(span=20).mean()
+        df["EMA60"] = df["Close"].ewm(span=60).mean()
 
-# 📈 캔들차트 + EMA 차트
-def plot_candlestick_chart(df):
-    fig = go.Figure()
+        fig = go.Figure()
 
-    # EMA 선
-    fig.add_trace(go.Scatter(
-        x=df.index, y=df['EMA20'],
-        mode='lines', name='EMA20', line=dict(color='blue', width=1)
-    ))
-    fig.add_trace(go.Scatter(
-        x=df.index, y=df['EMA60'],
-        mode='lines', name='EMA60', line=dict(color='orange', width=1)
-    ))
+        # 캔들차트
+        fig.add_trace(go.Candlestick(
+            x=df.index,
+            open=df['Open'],
+            high=df['High'],
+            low=df['Low'],
+            close=df['Close'],
+            name='Candlestick'
+        ))
 
-    # 캔들차트
-    fig.add_trace(go.Candlestick(
-        x=df.index,
-        open=df['Open'],
-        high=df['High'],
-        low=df['Low'],
-        close=df['Close'],
-        name='Candlestick'
-    ))
+        # EMA 선
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df['EMA20'], mode='lines', name='EMA20'
+        ))
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df['EMA60'], mode='lines', name='EMA60'
+        ))
 
-    fig.update_layout(
-        title="📉 주가 캔들차트 (EMA20/EMA60 포함)",
-        xaxis_title="날짜",
-        yaxis_title="가격 (USD)",
-        xaxis_rangeslider_visible=True,
-        height=500
-    )
+        fig.update_layout(
+            title=f'{ticker_input} - 최근 3개월 차트',
+            xaxis_title='날짜',
+            yaxis_title='가격',
+            xaxis_rangeslider_visible=False,
+            height=500
+        )
 
-    return fig
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("데이터를 불러오지 못했습니다.")
 
-# 📊 차트 출력
-st.subheader("📉 주가 차트 보기 (캔들차트 + 이동평균선)")
-
-if ticker:
-    try:
-        df = get_stock_data(ticker)
-        if df.empty:
-            st.warning("데이터가 존재하지 않습니다. 올바른 티커인지 확인해주세요.")
-        else:
-            chart_fig = plot_candlestick_chart(df)
-            st.plotly_chart(chart_fig, use_container_width=True)
-    except Exception as e:
-        st.error(f"차트를 불러오는 중 오류가 발생했습니다: {e}")
 
 # 여기에 인스타그램 안내 카드 코드 삽입
 
