@@ -3,78 +3,130 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 
+import streamlit as st
+
+# 사용자 정의 스타일 삽입
 st.markdown("""
-<style>
-/* 최상위 html, body, Streamlit 내부 여러 컨테이너 모두 배경, 글자색 강제 적용 */
-html, body, [class^="css"], .main, section, div[data-testid="stAppViewContainer"] {
-    background-color: #121212 !important;
-    color: #e0e0e0 !important;
-}
+    <style>
+    /* 기본 배경 및 전체 레이아웃 스타일 */
+    body, .main {
+        background-color: #121212;
+        color: #ffffff;
+    }
 
-/* 앱 제목 */
-.app-title {
-    font-size: 40px;
-    font-weight: bold;
-    color: #90caf9;
-    text-align: left;
-    padding: 5px 0 5px 0;
-    margin-left: 0;
-    margin-top: -70px;
-}
+    /* 카드 컨테이너 - 반응형 그리드 */
+    .card-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+    }
 
-/* 카드 스타일 */
-.card {
-    background-color: #1e1e1e !important;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
-    text-align: center;
-    transition: transform 0.2s;
-    height: 100%;
-    margin-bottom: 20px;
-}
-.card:hover {
-    transform: scale(1.02);
-    background-color: #333333 !important;
-}
+    /* 카드 스타일 */
+    .card {
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+        transition: transform 0.2s ease, background-color 0.2s ease;
+        height: 100%;
+        text-align: center;
+    }
 
-/* 카드 제목 */
-.card-title {
-    font-size: 20px;
-    font-weight: bold;
-    color: #81d4fa;
-    margin-bottom: 10px;
-}
+    .card:hover {
+        transform: scale(1.03);
+        background-color: #2a2a2a;
+    }
 
-/* 카드 설명 텍스트 */
-.card-desc {
-    font-size: 14px;
-    color: #bbbbbb;
-    margin-bottom: 15px;
-}
+    .card-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #81d4fa;
+        margin-bottom: 12px;
+    }
 
-/* 입력창 텍스트 중앙정렬 */
-input {
-    text-align: center;
-    background-color: #2c2c2c !important;
-    color: #e0e0e0 !important;
-    border: 1px solid #444444 !important;
-    border-radius: 5px;
-}
+    .card-desc {
+        font-size: 14px;
+        color: #cccccc;
+        margin-bottom: 10px;
+    }
 
-/* 버튼 텍스트 색상 */
-.stButton>button {
-    background-color: #1976d2 !important;
-    color: white !important;
-    border-radius: 5px;
-}
+    /* 점수 게이지 바 */
+    .score-bar {
+        background-color: #333;
+        border-radius: 10px;
+        overflow: hidden;
+        height: 12px;
+        margin-top: 10px;
+    }
 
-/* 기타 텍스트 색상 */
-p, span, div, h1, h2, h3, h4, h5, h6 {
-    color: #e0e0e0 !important;
-}
-</style>
+    .score-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #00e676, #00b0ff);
+        transition: width 0.3s ease;
+    }
+
+    /* 검색창 스타일 */
+    .search-container {
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    input[type="text"] {
+        padding: 10px 15px;
+        border-radius: 10px;
+        border: none;
+        outline: none;
+        width: 80%;
+        max-width: 400px;
+        background-color: #2a2a2a;
+        color: #ffffff;
+        font-size: 16px;
+    }
+
+    @media screen and (max-width: 600px) {
+        .card-title {
+            font-size: 18px;
+        }
+        .card-desc {
+            font-size: 13px;
+        }
+    }
+    </style>
 """, unsafe_allow_html=True)
+
+# ----------------------------
+# ✅ 샘플 UI 구현
+# ----------------------------
+
+# 검색창
+st.markdown('<div class="search-container"><input type="text" placeholder="티커 또는 종목명을 입력하세요..."></div>', unsafe_allow_html=True)
+
+# 카드 UI 샘플
+cards = [
+    {"title": "AAPL", "desc": "애플 주식 분석", "score": 72},
+    {"title": "TSLA", "desc": "테슬라 저점 반등 감지", "score": 85},
+    {"title": "NVDA", "desc": "NVIDIA 매수 타점 감지", "score": 91},
+    {"title": "QQQ", "desc": "ETF 기술 분석", "score": 67},
+]
+
+# 카드 렌더링
+st.markdown('<div class="card-container">', unsafe_allow_html=True)
+for card in cards:
+    score_html = f"""
+        <div class="score-bar">
+            <div class="score-fill" style="width: {card['score']}%;"></div>
+        </div>
+    """
+    html = f"""
+    <div class="card">
+        <div class="card-title">{card['title']}</div>
+        <div class="card-desc">{card['desc']}</div>
+        {score_html}
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # 지표 계산 함수들 (기존 함수 재활용)
