@@ -1,3 +1,5 @@
+import mplfinance as mpf
+import tempfile
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -379,6 +381,34 @@ with col1:
                         - 진입가: {entry:.2f}<br>
                         - 목표가: {target:.2f}<br>
                         - 손절가: {stop:.2f}
+                       def plot_candlestick_chart_with_lines(df, entry_price, stop_loss, target_price):
+    """
+    mplfinance를 사용해 캔들차트 그리고 진입/손절/목표가 선 표시 후 이미지 파일 생성 반환
+    """
+    df_plot = df.copy()
+    df_plot.index = pd.DatetimeIndex(df_plot.index)
+
+    addplots = [
+        mpf.make_addplot([entry_price]*len(df_plot), type='line', color='yellow', linestyle='-', width=1, panel=0, ylabel='Entry'),
+        mpf.make_addplot([stop_loss]*len(df_plot), type='line', color='red', linestyle='--', width=1, panel=0, ylabel='Stop Loss'),
+        mpf.make_addplot([target_price]*len(df_plot), type='line', color='lime', linestyle='--', width=1, panel=0, ylabel='Target'),
+    ]
+
+    # 임시파일 생성 (png)
+    tmpfile = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+    mpf.plot(
+        df_plot,
+        type='candle',
+        style='charles',
+        addplot=addplots,
+        volume=True,
+        mav=(5, 10),
+        figsize=(10, 6),
+        tight_layout=True,
+        savefig=tmpfile.name
+    )
+    tmpfile.close()
+    return tmpfile.name
                         </div>
                         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
@@ -496,50 +526,6 @@ with col5:
 # ... 기존 col4, col5 코드 끝난 뒤에
 
 st.markdown("<hr>", unsafe_allow_html=True)
-
-# 📍 col1, col2, col3, col4, col5 카드 UI가 끝난 직후 아래 코드 삽입
-
-# 캔들 차트 + EMA 시각화 (카드 아래에 붙이세요)
-if ticker_input:
-    df = yf.download(ticker_input, period="3mo", interval="1d")
-    df.dropna(inplace=True)
-
-    if len(df) > 0:
-        df["EMA20"] = df["Close"].ewm(span=20).mean()
-        df["EMA60"] = df["Close"].ewm(span=60).mean()
-
-        fig = go.Figure()
-
-        # 캔들차트
-        fig.add_trace(go.Candlestick(
-            x=df.index,
-            open=df['Open'],
-            high=df['High'],
-            low=df['Low'],
-            close=df['Close'],
-            name='Candlestick'
-        ))
-
-        # EMA 선
-        fig.add_trace(go.Scatter(
-            x=df.index, y=df['EMA20'], mode='lines', name='EMA20'
-        ))
-        fig.add_trace(go.Scatter(
-            x=df.index, y=df['EMA60'], mode='lines', name='EMA60'
-        ))
-
-        fig.update_layout(
-            title=f'{ticker_input} - 최근 3개월 차트',
-            xaxis_title='날짜',
-            yaxis_title='가격',
-            xaxis_rangeslider_visible=False,
-            height=500
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("데이터를 불러오지 못했습니다.")
-
 
 # 여기에 인스타그램 안내 카드 코드 삽입
 
