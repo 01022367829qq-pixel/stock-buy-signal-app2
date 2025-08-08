@@ -210,7 +210,9 @@ def score_turtle_enhanced(df):
     target_price = close + (atr_val * 2)
     stop_loss = close - (atr_val * 1.5)
 
-  score, msg, entry, target, stop, recommendation = score_turtle_enhanced(df)
+# 최상위 레벨 (들여쓰기 없음)
+score, msg, entry, target, stop, recommendation = score_turtle_enhanced(df)
+
 
 
 
