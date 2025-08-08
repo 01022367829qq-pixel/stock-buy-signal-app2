@@ -383,13 +383,14 @@ with col1:
                     st.info(msg)
                     if entry and target and stop:
                         st.markdown(f"""
-                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-                        <strong>💡 자동 계산 진입/청산가:</strong><br>
-                        - 진입가: {entry:.2f}<br>
-                        - 목표가: {target:.2f}<br>
-                        - 손절가: {stop:.2f}
-                        </div>
-                        """, unsafe_allow_html=True)
+<div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
+<strong>&#x1F4A1; 자동 계산 진입/청산가:</strong><br>
+- 진입가: {entry:.2f}<br>
+- 목표가: {target:.2f}<br>
+- 손절가: {stop:.2f}
+</div>
+""", unsafe_allow_html=True)
+
 
                         # 차트 생성 및 표시
                         chart_path = plot_candlestick_chart_with_lines(df, entry, stop, target)
