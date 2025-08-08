@@ -78,71 +78,72 @@ p, span, div, h1, h2, h3, h4, h5, h6 {
 
 
 # 지표 계산 함수들 (기존 함수 재활용)
-def calculate_rsi(series, period=14):
-    delta = series.diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-    avg_gain = gain.rolling(period).mean()
-    avg_loss = loss.rolling(period).mean()
-    rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
+def score_turtle_enhanced(df):
+    if df is None or df.empty or len(df) < 60:
+        return 0, ["데이터가 충분하지 않습니다."], None, None, None, "분석할 데이터가 부족합니다."
 
-def calculate_bollinger(series, window=20, num_std=2):
-    ma = series.rolling(window).mean()
-    std = series.rolling(window).std()
-    upper = ma + num_std * std
-    lower = ma - num_std * std
-    width = upper - lower
-    return upper, lower, width
+    df = df.copy()
+    df['20d_high'] = df['High'].rolling(20).max().shift(1)
+    df['10d_low'] = df['Low'].rolling(10).min().shift(1)
+    df['ATR'] = calculate_atr(df, 14)
+    df['RSI'] = calculate_rsi(df['Close'], 14)
+    df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
+    df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
+    df['Vol_mean'] = df['Volume'].rolling(20).mean()
 
-def calculate_atr(df, period=14):
-    high_low = df['High'] - df['Low']
-    high_close = np.abs(df['High'] - df['Close'].shift(1))
-    low_close = np.abs(df['Low'] - df['Close'].shift(1))
-    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    return tr.rolling(period).mean()
+    df.dropna(inplace=True)
+    if len(df) < 1:
+        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None, "기술 지표 계산 오류"
 
-def calculate_adx(df, period=14):
-    high = df['High']
-    low = df['Low']
-    close = df['Close']
+    close = float(df['Close'].iloc[-1])
+    high20 = float(df['20d_high'].iloc[-1])
+    low10 = float(df['10d_low'].iloc[-1])
+    atr_val = float(df['ATR'].iloc[-1])
+    rsi = float(df['RSI'].iloc[-1])
+    bbw = float(df['BB_width'].iloc[-1])
+    bbw_mean = float(df['BB_width_mean'].iloc[-1])
+    vol = float(df['Volume'].iloc[-1])
+    vol_mean = float(df['Vol_mean'].iloc[-1])
 
-    plus_dm = high.diff()
-    minus_dm = low.diff()
+    for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None, "기술 지표 계산 오류"
 
-    plus_dm_values = plus_dm.values
-    minus_dm_values = minus_dm.values
+    score = 0
+    msgs = []
 
-    plus_dm_adj = np.where((plus_dm_values > minus_dm_values) & (plus_dm_values > 0), plus_dm_values, 0).flatten()
-    minus_dm_adj = np.where((minus_dm_values > plus_dm_values) & (minus_dm_values > 0), minus_dm_values, 0).flatten()
+    if close > high20:
+        score += 30
+        msgs.append("✅ 20일 최고가 돌파 (+30점)")
+    if rsi < 50:
+        score += 10
+        msgs.append(f"✅ RSI({rsi:.1f}) 과매도/중립 (+10점)")
+    prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
+    if bbw < bbw_mean * 0.8 and close > prev_upper:
+        score += 15
+        msgs.append("✅ BB 수축 후 상단 돌파 (+15점)")
+    if vol > vol_mean * 1.2:
+        score += 15
+        msgs.append("✅ 거래량 증가 (+15점)")
+    atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
+    if atr_val > atr_mean:
+        score += 20
+        msgs.append("✅ ATR 증가 (+20점)")
+    if close < low10:
+        score -= 20
+        msgs.append("⚠️ 10일 최저가 이탈 위험 (-20점)")
 
-    tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
-    ], axis=1).max(axis=1)
+    score = max(0, min(100, score))
+    if not msgs:
+        msgs = ["신호 없음"]
 
-    atr = tr.rolling(period).mean()
+    entry_price = close
+    target_price = close + (atr_val * 2)
+    stop_loss = close - (atr_val * 1.5)
 
-    plus_di = 100 * (pd.Series(plus_dm_adj, index=df.index).rolling(period).mean() / atr)
-    minus_di = 100 * (pd.Series(minus_dm_adj, index=df.index).rolling(period).mean() / atr)
+    recommendation = get_recommendation(score)
 
-    dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
-    adx = dx.rolling(period).mean()
-
-    adx = adx.fillna(method='bfill').fillna(method='ffill')
-
-    return adx
-
-def get_recommendation(score):
-    if score < 30:
-        return "현재 조건은 매수하기에 적합하지 않습니다."
-    elif score < 60:
-        return "신중한 접근이 필요합니다. 추가 확인 후 매수하세요."
-    elif score < 80:
-        return "매수 조건이 양호합니다. 진입을 고려해보세요."
-    else:
-        return "강력한 매수 신호입니다! 진입 추천드립니다."
+    return score, msgs, entry_price, target_price, stop_loss, recommendation
 
 # 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
 def score_turtle_enhanced(df):
