@@ -135,6 +135,34 @@ def calculate_adx(df, period=14):
     return adx
 
 # 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
+import numpy as np
+
+def calculate_atr(df, period=14):
+    # ATR 계산 코드 (예시)
+    high_low = df['High'] - df['Low']
+    high_close = np.abs(df['High'] - df['Close'].shift())
+    low_close = np.abs(df['Low'] - df['Close'].shift())
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = tr.rolling(period).mean()
+    return atr
+
+def calculate_rsi(series, period=14):
+    # RSI 계산 코드 (예시)
+    delta = series.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+def calculate_bollinger(series, period=20, std_dev=2):
+    sma = series.rolling(period).mean()
+    std = series.rolling(period).std()
+    upper = sma + std_dev * std
+    lower = sma - std_dev * std
+    width = (upper - lower) / sma
+    return upper, lower, width
+
 def get_recommendation(score):
     if score < 30:
         return "현재 조건은 매수하기에 적합하지 않습니다."
@@ -145,7 +173,6 @@ def get_recommendation(score):
     else:
         return "강력한 매수 신호입니다! 진입 추천드립니다."
 
-# 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
         return 0, ["데이터가 충분하지 않습니다."], None, None, None, "분석할 데이터가 부족합니다."
@@ -212,6 +239,10 @@ def score_turtle_enhanced(df):
     stop_loss = close - (atr_val * 1.5)
 
     return score, msgs, entry_price, target_price, stop_loss, recommendation
+
+# 최상위 레벨에서 함수 호출
+score, msgs, entry, target, stop, rec = score_turtle_enhanced(df)
+
 
 
 # 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합)
