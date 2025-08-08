@@ -5,77 +5,254 @@ import numpy as np
 
 import streamlit as st
 
-# 사용자 정의 스타일 삽입
-st.set_page_config(page_title="TradeVibes", layout="wide", initial_sidebar_state="expanded")
+# --- 기술지표 함수 예시 ---
+def calculate_rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
 
-# 사용자 정의 CSS 삽입
-st.markdown("""
+def calculate_bollinger(series, window=20, num_std=2):
+    ma = series.rolling(window).mean()
+    std = series.rolling(window).std()
+    upper = ma + num_std * std
+    lower = ma - num_std * std
+    width = upper - lower
+    return upper, lower, width
+
+def calculate_atr(df, period=14):
+    high_low = df['High'] - df['Low']
+    high_close = np.abs(df['High'] - df['Close'].shift(1))
+    low_close = np.abs(df['Low'] - df['Close'].shift(1))
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    return tr.rolling(period).mean()
+
+def calculate_adx(df, period=14):
+    high = df['High']
+    low = df['Low']
+    close = df['Close']
+
+    plus_dm = high.diff()
+    minus_dm = low.diff()
+
+    plus_dm_values = plus_dm.values
+    minus_dm_values = minus_dm.values
+
+    plus_dm_adj = np.where((plus_dm_values > minus_dm_values) & (plus_dm_values > 0), plus_dm_values, 0).flatten()
+    minus_dm_adj = np.where((minus_dm_values > plus_dm_values) & (minus_dm_values > 0), minus_dm_values, 0).flatten()
+
+    tr = pd.concat([
+        high - low,
+        (high - close.shift(1)).abs(),
+        (low - close.shift(1)).abs()
+    ], axis=1).max(axis=1)
+
+    atr = tr.rolling(period).mean()
+
+    plus_di = 100 * (pd.Series(plus_dm_adj, index=df.index).rolling(period).mean() / atr)
+    minus_di = 100 * (pd.Series(minus_dm_adj, index=df.index).rolling(period).mean() / atr)
+
+    dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+    adx = dx.rolling(period).mean()
+
+    adx = adx.fillna(method='bfill').fillna(method='ffill')
+
+    return adx
+
+# --- 점수 계산 함수들 (실제 로직은 사용자가 넣어야 함) ---
+def score_turtle_enhanced(df):
+    # 여기에 실제 로직 구현
+    return 0, "샘플 메시지: Turtle Enhanced 전략", None, None, None
+
+def score_swing_trading(df):
+    # 여기에 실제 로직 구현
+    return 0, "샘플 메시지: Swing Trading 전략", None, None, None
+
+def score_position_trading(df):
+    # 여기에 실제 로직 구현
+    return 0, "샘플 메시지: Position Trading 전략", None, None, None
+
+
+# --- 메인 UI 함수 ---
+def main():
+    st.set_page_config(page_title="매수 타점 분석기", layout="wide")
+
+    # 다크 테마 CSS (배경, 텍스트, 카드, 입력창, 버튼)
+    dark_theme_css = """
     <style>
-        /* 페이지 배경 다크 설정 */
-        body {
-            background-color: #121212;
-            color: #ffffff;
-        }
+    /* 전체 배경 및 텍스트 색상 */
+    html, body, [class^="css"], .stApp, section, div[data-testid="stAppViewContainer"] {
+        background-color: #121212 !important;
+        color: #e0e0e0 !important;
+    }
 
-</style>
-"""
+    /* 사이드바 배경 */
+    [data-testid="stSidebar"] {
+        background-color: #1a1a1a !important;
+    }
 
-        /* 전체 앱 영역 배경 설정 */
-        .main {
-            background-color: #121212 !important;
-        }
+    /* 앱 제목 스타일 */
+    .app-title {
+        font-size: 40px;
+        font-weight: bold;
+        color: #90caf9;
+        text-align: left;
+        padding: 5px 0 15px 0;
+        margin-left: 0;
+        margin-top: 10px;
+    }
 
-        /* 카드 스타일 */
-        .card {
-            background-color: #1e1e1e !important;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
-            text-align: center;
-            transition: transform 0.2s;
-            height: 100%;
-            margin-bottom: 20px;
-        }
-        .card:hover {
-            transform: scale(1.02);
-            background-color: #333333 !important;
-        }
+    /* 카드 스타일 */
+    .card {
+        background-color: #1e1e1e !important;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.7);
+        text-align: center;
+        transition: transform 0.2s;
+        height: 100%;
+        margin-bottom: 20px;
+    }
+    .card:hover {
+        transform: scale(1.03);
+        background-color: #333333 !important;
+    }
 
-        /* 카드 제목 */
-        .card-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #81d4fa;
-            margin-bottom: 10px;
-        }
+    /* 카드 제목 */
+    .card-title {
+        font-size: 22px;
+        font-weight: bold;
+        color: #81d4fa;
+        margin-bottom: 10px;
+    }
 
-        /* 카드 설명 */
-        .card-desc {
-            font-size: 14px;
-            color: #bbbbbb;
-            margin-bottom: 15px;
-        }
+    /* 카드 설명 텍스트 */
+    .card-desc {
+        font-size: 14px;
+        color: #bbbbbb;
+        margin-bottom: 15px;
+    }
 
-        /* Streamlit 요소 넓이 조정 */
-        .element-container {
-            max-width: 100% !important;
-        }
+    /* 입력창 스타일 */
+    input[type="text"] {
+        text-align: center;
+        background-color: #2c2c2c !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #444444 !important;
+        border-radius: 5px;
+        padding: 8px;
+        font-size: 16px;
+    }
 
-        /* 반응형 카드 레이아웃 */
-        @media (max-width: 768px) {
-            .stColumn {
-                width: 100% !important;
-                display: block;
-            }
-        }
+    /* 버튼 스타일 */
+    .stButton>button {
+        background-color: #1976d2 !important;
+        color: white !important;
+        border-radius: 5px;
+        padding: 8px 20px;
+        font-size: 16px;
+        font-weight: 600;
+        transition: background-color 0.2s ease;
+    }
+    .stButton>button:hover {
+        background-color: #115293 !important;
+    }
+
+    /* 기타 텍스트 색상 */
+    p, span, div, h1, h2, h3, h4, h5, h6 {
+        color: #e0e0e0 !important;
+    }
     </style>
-""", unsafe_allow_html=True)
+    """
 
-# 타이틀 및 설명
-st.markdown("<h1 style='color:#81d4fa;'>📊 TradeVibes 매수 분석 시스템</h1>", unsafe_allow_html=True)
-st.markdown("##### 기술적 지표 기반 점수화 시스템 — 저점 반등 & 추세 추종 전략 포함", unsafe_allow_html=True)
-st.markdown("---")
+    st.markdown(dark_theme_css, unsafe_allow_html=True)
 
+    # 앱 제목
+    st.markdown('<div class="app-title">📈 매수 타점 분석기</div>', unsafe_allow_html=True)
+
+    # 지침 사항 토글
+    st.markdown("<h2 style='text-align:center; color:#90caf9;'>📋 앱 사용 전 지침 사항</h2>", unsafe_allow_html=True)
+    if st.checkbox("지침 사항 보기", key="show_guideline"):
+        st.markdown("""
+            <div style="background-color:#222; padding:15px; border-radius:10px; margin-bottom:20px; color:#ccc;">
+            - 종목 평가 점수가 낮을시에 진입 하는것은 도박에 가깝습니다!! 지침 사항에 따라 종목 평가 점수가 60점 이상인 상황에서 들어가야 안전합니다.<br>
+            - 본 앱은 투자 참고용입니다. 실제 투자 결정은 본인 책임입니다.<br>
+            - 실시간 데이터는 1분 가량 지연될 수 있으니 참고 바랍니다.<br>
+            - 종목명을 검색하였을 때 종목 평가 점수가 60점 이상인 상황에서 들어가야 설명 그대로의 승률이 나옵니다.<br>
+            - 문의사항은 인스타그램 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color:#90caf9;">@trade_vibes.kr</a> 로 연락 바랍니다.<br>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 모두 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    # 3가지 전략 컬럼
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">1️⃣ 데이 트레이딩</div>', unsafe_allow_html=True)
+        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 단기 매매 전략입니다. (평가 60점 이상 권장)"
+        show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
+        if show_desc_dt:
+            st.markdown(f'<div class="card-desc">{desc_text_dt}</div>', unsafe_allow_html=True)
+
+        ticker = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_dt")
+        if st.button("🔍 분석", key="btn_dt"):
+            if not ticker.strip():
+                st.warning("티커를 입력하세요.")
+            else:
+                df = yf.download(ticker, period="3mo", interval="1d")
+                if df.empty:
+                    st.error("데이터를 불러올 수 없습니다.")
+                else:
+                    score, msg, entry, target, stop = score_turtle_enhanced(df)
+                    st.success(f"점수: {score} / 100")
+                    st.info(msg)
+                    if entry and target and stop:
+                        st.markdown(f"""
+                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px; background:#2c2c2c'>
+                        <strong>💡 자동 계산 진입/청산가:</strong><br>
+                        - 진입가: {entry:.2f}<br>
+                        - 목표가: {target:.2f}<br>
+                        - 손절가: {stop:.2f}
+                        </div>
+                        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">2️⃣ 스윙 트레이딩</div>', unsafe_allow_html=True)
+        desc_text_swing = "Tony Cruz의 전략을 기반으로 4가지 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 중기 매매 전략입니다. (평가 60점 이상 권장)"
+        show_desc_swing = st.checkbox("설명 보기", key="chk_desc_swing")
+        if show_desc_swing:
+            st.markdown(f'<div class="card-desc">{desc_text_swing}</div>', unsafe_allow_html=True)
+
+        ticker_swing = st.text_input("", placeholder="티커 입력 (예: AAPL)", key="ticker_swing")
+        if st.button("🔍 분석", key="btn_swing"):
+            if not ticker_swing.strip():
+                st.warning("티커를 입력하세요.")
+            else:
+                df_swing = yf.download(ticker_swing, period="6mo", interval="1d")
+                if df_swing.empty:
+                    st.error("데이터를 불러올 수 없습니다.")
+                else:
+                    score, msg, entry, target, stop = score_swing_trading(df_swing)
+                    st.success(f"점수: {score} / 100")
+                    st.info(msg)
+                    if entry and target and stop:
+                        st.markdown(f"""
+                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px; background:#2c2c2c'>
+                        <strong>💡 자동 계산 진입/청산가:</strong><br>
+                        - 진입가: {entry:.2f}<br>
+                        - 목표가: {target:.2f}<br>
+                        - 손절가: {stop:.2f}
+                        </div>
+                        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 # 지표 계산 함수들 (기존 함수 재활용)
