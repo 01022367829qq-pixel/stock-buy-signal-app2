@@ -205,53 +205,65 @@ def score_turtle_enhanced(df):
 # 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합)
 def score_swing_trading(df):
     if df is None or df.empty or len(df) < 50:
-        return 0, "데이터가 충분하지 않습니다.", None, None, None
+        return 0, ["데이터가 충분하지 않습니다."], None, None, None
 
     df = df.copy()
     df['RSI'] = calculate_rsi(df['Close'], 14)
     df['ADX'] = calculate_adx(df, 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
+    df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
 
     df.dropna(inplace=True)
     if len(df) < 1:
-        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
+        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
 
     close = float(df['Close'].iloc[-1])
     rsi = float(df['RSI'].iloc[-1])
     adx = float(df['ADX'].iloc[-1])
     bbw = float(df['BB_width'].iloc[-1])
+    bbw_mean = float(df['BB_width_mean'].iloc[-1])
     vol = float(df['Volume'].iloc[-1])
     vol_mean = float(df['Vol_mean'].iloc[-1])
 
-    for val in [rsi, adx, bbw, vol_mean]:
+    for val in [rsi, adx, bbw, bbw_mean, vol, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
-            return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
+            return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
 
     score = 0
     msgs = []
 
+    # RSI 점수
     if rsi < 30:
         score += 10
-        msgs.append(f"RSI({rsi:.1f}) 과매도")
+        msgs.append(f"✅ RSI({rsi:.1f}) 과매도 (+10점)")
     elif rsi > 70:
         score -= 10
-        msgs.append(f"RSI({rsi:.1f}) 과매수")
+        msgs.append(f"⚠️ RSI({rsi:.1f}) 과매수 (-10점)")
+    else:
+        msgs.append(f"ℹ️ RSI({rsi:.1f}) 중립 (점수 없음)")
 
+    # ADX 점수
     if adx > 25:
         score += 30
-        msgs.append(f"ADX({adx:.1f}) 강한 추세")
+        msgs.append(f"✅ ADX({adx:.1f}) 강한 추세 (+30점)")
     else:
         score += 10
-        msgs.append(f"ADX({adx:.1f}) 약한 추세")
+        msgs.append(f"ℹ️ ADX({adx:.1f}) 약한 추세 (+10점)")
 
-    if bbw < df['BB_width'].rolling(20).mean().iloc[-1]:
+    # 볼린저밴드 수축
+    if bbw < bbw_mean:
         score += 20
-        msgs.append("볼린저 밴드 수축")
+        msgs.append(f"✅ 볼린저밴드 수축 (현재 폭 {bbw:.3f} < 평균 폭 {bbw_mean:.3f}) (+20점)")
+    else:
+        msgs.append(f"ℹ️ 볼린저밴드 평범 (점수 없음)")
 
+    # 거래량 증가
     if vol > vol_mean * 1.3:
         score += 20
-        msgs.append("거래량 급증")
+        msgs.append(f"✅ 거래량 급증 (현재 {vol:.0f} > 평균 {vol_mean:.0f}) (+20점)")
+    else:
+        msgs.append(f"ℹ️ 거래량 평범 (점수 없음)")
 
     score = max(0, min(100, score))
     if not msgs:
@@ -265,7 +277,8 @@ def score_swing_trading(df):
         target_price = close * 1.10
         stop_loss = close * 0.90
 
-    return score, "; ".join(msgs), entry_price, target_price, stop_loss
+    return score, msgs, entry_price, target_price, stop_loss
+
 
 # 포지션 트레이딩 점수 함수 예시 (간단한 EMA, RSI, ATR 조합)
 def score_position_trading(df):
