@@ -6,127 +6,73 @@ import numpy as np
 import streamlit as st
 
 # 사용자 정의 스타일 삽입
+st.set_page_config(page_title="TradeVibes", layout="wide", initial_sidebar_state="expanded")
+
+# 사용자 정의 CSS 삽입
 st.markdown("""
     <style>
-    /* 기본 배경 및 전체 레이아웃 스타일 */
-    body, .main {
-        background-color: #121212;
-        color: #ffffff;
-    }
+        /* 페이지 배경 다크 설정 */
+        body {
+            background-color: #121212;
+            color: #ffffff;
+        }
 
-    /* 카드 컨테이너 - 반응형 그리드 */
-    .card-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin-top: 30px;
-    }
+        /* 전체 앱 영역 배경 설정 */
+        .main {
+            background-color: #121212 !important;
+        }
 
-    /* 카드 스타일 */
-    .card {
-        background-color: #1e1e1e;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
-        transition: transform 0.2s ease, background-color 0.2s ease;
-        height: 100%;
-        text-align: center;
-    }
+        /* 카드 스타일 */
+        .card {
+            background-color: #1e1e1e !important;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
+            text-align: center;
+            transition: transform 0.2s;
+            height: 100%;
+            margin-bottom: 20px;
+        }
+        .card:hover {
+            transform: scale(1.02);
+            background-color: #333333 !important;
+        }
 
-    .card:hover {
-        transform: scale(1.03);
-        background-color: #2a2a2a;
-    }
-
-    .card-title {
-        font-size: 20px;
-        font-weight: bold;
-        color: #81d4fa;
-        margin-bottom: 12px;
-    }
-
-    .card-desc {
-        font-size: 14px;
-        color: #cccccc;
-        margin-bottom: 10px;
-    }
-
-    /* 점수 게이지 바 */
-    .score-bar {
-        background-color: #333;
-        border-radius: 10px;
-        overflow: hidden;
-        height: 12px;
-        margin-top: 10px;
-    }
-
-    .score-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #00e676, #00b0ff);
-        transition: width 0.3s ease;
-    }
-
-    /* 검색창 스타일 */
-    .search-container {
-        margin-bottom: 30px;
-        text-align: center;
-    }
-
-    input[type="text"] {
-        padding: 10px 15px;
-        border-radius: 10px;
-        border: none;
-        outline: none;
-        width: 80%;
-        max-width: 400px;
-        background-color: #2a2a2a;
-        color: #ffffff;
-        font-size: 16px;
-    }
-
-    @media screen and (max-width: 600px) {
+        /* 카드 제목 */
         .card-title {
-            font-size: 18px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #81d4fa;
+            margin-bottom: 10px;
         }
+
+        /* 카드 설명 */
         .card-desc {
-            font-size: 13px;
+            font-size: 14px;
+            color: #bbbbbb;
+            margin-bottom: 15px;
         }
-    }
+
+        /* Streamlit 요소 넓이 조정 */
+        .element-container {
+            max-width: 100% !important;
+        }
+
+        /* 반응형 카드 레이아웃 */
+        @media (max-width: 768px) {
+            .stColumn {
+                width: 100% !important;
+                display: block;
+            }
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------
-# ✅ 샘플 UI 구현
-# ----------------------------
+# 타이틀 및 설명
+st.markdown("<h1 style='color:#81d4fa;'>📊 TradeVibes 매수 분석 시스템</h1>", unsafe_allow_html=True)
+st.markdown("##### 기술적 지표 기반 점수화 시스템 — 저점 반등 & 추세 추종 전략 포함", unsafe_allow_html=True)
+st.markdown("---")
 
-# 검색창
-st.markdown('<div class="search-container"><input type="text" placeholder="티커 또는 종목명을 입력하세요..."></div>', unsafe_allow_html=True)
-
-# 카드 UI 샘플
-cards = [
-    {"title": "AAPL", "desc": "애플 주식 분석", "score": 72},
-    {"title": "TSLA", "desc": "테슬라 저점 반등 감지", "score": 85},
-    {"title": "NVDA", "desc": "NVIDIA 매수 타점 감지", "score": 91},
-    {"title": "QQQ", "desc": "ETF 기술 분석", "score": 67},
-]
-
-# 카드 렌더링
-st.markdown('<div class="card-container">', unsafe_allow_html=True)
-for card in cards:
-    score_html = f"""
-        <div class="score-bar">
-            <div class="score-fill" style="width: {card['score']}%;"></div>
-        </div>
-    """
-    html = f"""
-    <div class="card">
-        <div class="card-title">{card['title']}</div>
-        <div class="card-desc">{card['desc']}</div>
-        {score_html}
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
 
 
 # 지표 계산 함수들 (기존 함수 재활용)
