@@ -210,7 +210,8 @@ def score_turtle_enhanced(df):
     target_price = close + (atr_val * 2)
     stop_loss = close - (atr_val * 1.5)
 
-    return score, msgs, entry_price, target_price, stop_loss, recommendation
+  score, msg, entry, target, stop, recommendation = score_turtle_enhanced(df)
+
 
 
 
