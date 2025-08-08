@@ -210,9 +210,13 @@ def score_turtle_enhanced(df):
     target_price = close + (atr_val * 2)
     stop_loss = close - (atr_val * 1.5)
 
-# 최상위 레벨 (들여쓰기 없음)
+# 함수 내부에 return
+def score_turtle_enhanced(df):
+    # ... 계산 코드 ...
+    return score, msgs, entry_price, target_price, stop_loss, recommendation
+
+# 함수 호출부 (최상위 레벨)
 score, msg, entry, target, stop, recommendation = score_turtle_enhanced(df)
-return score, msgs, entry_price, target_price, stop_loss, recommendation
 
 
 
