@@ -141,9 +141,9 @@ def score_turtle_enhanced(df):
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
-    df['10d_low']  = df['Low'].rolling(10).min().shift(1)
-    df['ATR']      = calculate_atr(df, 14)
-    df['RSI']      = calculate_rsi(df['Close'], 14)
+    df['10d_low'] = df['Low'].rolling(10).min().shift(1)
+    df['ATR'] = calculate_atr(df, 14)
+    df['RSI'] = calculate_rsi(df['Close'], 14)
     df['BB_upper'], df['BB_lower'], df['BB_width'] = calculate_bollinger(df['Close'], 20, 2)
     df['BB_width_mean'] = df['BB_width'].rolling(20).mean()
     df['Vol_mean'] = df['Volume'].rolling(20).mean()
@@ -171,24 +171,24 @@ def score_turtle_enhanced(df):
 
     if close > high20:
         score += 30
-        msgs.append("✅ 20일 최고가 돌파")
+        msgs.append("✅ 20일 최고가 돌파 (+30점)")
     if rsi < 50:
         score += 10
-        msgs.append(f"✅ RSI({rsi:.1f}) 과매도/중립")
+        msgs.append(f"✅ RSI({rsi:.1f}) 과매도/중립 (+10점)")
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
     if bbw < bbw_mean * 0.8 and close > prev_upper:
         score += 15
-        msgs.append("✅ BB 수축 후 상단 돌파")
+        msgs.append("✅ BB 수축 후 상단 돌파 (+15점)")
     if vol > vol_mean * 1.2:
         score += 15
-        msgs.append("✅ 거래량 증가")
+        msgs.append("✅ 거래량 증가 (+15점)")
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
     if atr_val > atr_mean:
         score += 20
-        msgs.append("✅ ATR 증가")
+        msgs.append("✅ ATR 증가 (+20점)")
     if close < low10:
         score -= 20
-        msgs.append("⚠️ 10일 최저가 이탈 위험")
+        msgs.append("⚠️ 10일 최저가 이탈 위험 (-20점)")
 
     score = max(0, min(100, score))
     if not msgs:
@@ -199,6 +199,7 @@ def score_turtle_enhanced(df):
     stop_loss = close - (atr_val * 1.5)
 
     return score, msgs, entry_price, target_price, stop_loss
+
 
 
 # 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합)
