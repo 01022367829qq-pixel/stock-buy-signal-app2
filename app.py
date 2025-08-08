@@ -283,7 +283,7 @@ def score_swing_trading(df):
 # 포지션 트레이딩 점수 함수 예시 (간단한 EMA, RSI, ATR 조합)
 def score_position_trading(df):
     if df is None or df.empty or len(df) < 50:
-        return 0, "데이터가 충분하지 않습니다.", None, None, None
+        return 0, ["데이터가 충분하지 않습니다."], None, None, None
 
     df = df.copy()
     df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
@@ -293,13 +293,14 @@ def score_position_trading(df):
 
     df.dropna(inplace=True)
     if len(df) < 1:
-        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
+        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
 
     close = float(df['Close'].iloc[-1])
     ema50 = float(df['EMA50'].iloc[-1])
     ema200 = float(df['EMA200'].iloc[-1])
     rsi = float(df['RSI'].iloc[-1])
     atr = float(df['ATR'].iloc[-1])
+    atr_mean = df['ATR'].rolling(50).mean().iloc[-1]
 
     score = 0
     msgs = []
@@ -307,22 +308,26 @@ def score_position_trading(df):
     # 장기 추세 판단
     if ema50 > ema200:
         score += 40
-        msgs.append("EMA50 > EMA200: 상승 추세")
+        msgs.append("✅ EMA50 > EMA200: 상승 추세 (+40점)")
     else:
-        msgs.append("EMA50 <= EMA200: 하락 추세")
+        msgs.append("⚠️ EMA50 <= EMA200: 하락 추세 (점수 없음)")
 
     # RSI 상태
     if rsi < 40:
         score += 10
-        msgs.append(f"RSI({rsi:.1f}) 과매도 영역")
+        msgs.append(f"✅ RSI({rsi:.1f}) 과매도 영역 (+10점)")
     elif rsi > 70:
         score -= 10
-        msgs.append(f"RSI({rsi:.1f}) 과매수 영역")
+        msgs.append(f"⚠️ RSI({rsi:.1f}) 과매수 영역 (-10점)")
+    else:
+        msgs.append(f"ℹ️ RSI({rsi:.1f}) 중립 영역 (점수 없음)")
 
     # 최근 변동성
-    if atr > df['ATR'].rolling(50).mean().iloc[-1]:
+    if atr > atr_mean:
         score += 20
-        msgs.append("ATR 증가: 변동성 확대")
+        msgs.append("✅ ATR 증가: 변동성 확대 (+20점)")
+    else:
+        msgs.append("ℹ️ ATR 평범: 변동성 보통 (점수 없음)")
 
     score = max(0, min(100, score))
     if not msgs:
@@ -332,7 +337,8 @@ def score_position_trading(df):
     target_price = close * 1.15  # 15% 목표가 예시
     stop_loss = close - (atr * 2)  # ATR 2배 손절 예시
 
-    return score, "; ".join(msgs), entry_price, target_price, stop_loss
+    return score, msgs, entry_price, target_price, stop_loss
+
 
 # UI 렌더링
 # ... (기존 함수 정의들 끝난 직후)
