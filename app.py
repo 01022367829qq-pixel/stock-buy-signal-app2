@@ -1,4 +1,5 @@
 import streamlit as st
+import plotly.graph_objects as go
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -498,6 +499,68 @@ with col5:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # 여기에 인스타그램 안내 카드 코드 삽입
+# ----------- 주가 차트 시각화 시작 -----------
+
+# 📊 차트 그리기용 함수들
+def get_stock_data(ticker):
+    df = yf.download(ticker, period="6mo", interval="1d")
+    df['EMA20'] = df['Close'].ewm(span=20).mean()
+    df['EMA60'] = df['Close'].ewm(span=60).mean()
+    return df
+
+def plot_combined_chart(df, chart_type="둘 다"):
+    fig = go.Figure()
+
+    if chart_type in ["캔들차트", "둘 다"]:
+        fig.add_trace(go.Candlestick(
+            x=df.index,
+            open=df['Open'],
+            high=df['High'],
+            low=df['Low'],
+            close=df['Close'],
+            name='Candlestick'
+        ))
+
+    if chart_type in ["라인차트", "둘 다"]:
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df['Close'],
+            mode='lines', name='종가 라인', line=dict(color='gray')
+        ))
+
+    # EMA 라인 (항상 표시)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df['EMA20'],
+        mode='lines', name='EMA20', line=dict(color='blue', width=1)
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df['EMA60'],
+        mode='lines', name='EMA60', line=dict(color='orange', width=1)
+    ))
+
+    fig.update_layout(
+        title="📉 주가 차트",
+        xaxis_title="Date",
+        yaxis_title="Price (USD)",
+        xaxis_rangeslider_visible=(chart_type != "라인차트"),
+        height=500
+    )
+
+    return fig
+
+# 📈 Streamlit UI에 차트 출력
+st.subheader("📉 주가 차트 보기")
+
+chart_option = st.radio("차트 유형 선택", ["캔들차트", "라인차트", "둘 다"], index=2, horizontal=True)
+
+if ticker:  # 기존 ticker 변수를 그대로 사용
+    try:
+        df = get_stock_data(ticker)
+        chart_fig = plot_combined_chart(df, chart_option)
+        st.plotly_chart(chart_fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"차트를 불러오는 중 오류가 발생했습니다: {e}")
+
+# ----------- 주가 차트 시각화 끝 -----------
 
 with st.container():
     st.markdown("""
