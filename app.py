@@ -4,6 +4,97 @@ import pandas as pd
 import numpy as np
 
 import streamlit as st
+# 페이지 설정 (wide 모드 권장)
+st.set_page_config(
+    page_title="매수 타점 분석기",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# 강제 다크 테마 CSS
+st.markdown(
+    """
+    <style>
+    /* 최상위 배경 및 텍스트 강제 적용 */
+    body, html, .css-18e3th9, .css-1d391kg, .stApp, div[data-testid="stAppViewContainer"] {
+        background-color: #121212 !important;
+        color: #e0e0e0 !important;
+    }
+
+    /* 카드 스타일 */
+    .card {
+        background-color: #1e1e1e !important;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
+        text-align: center;
+        transition: transform 0.2s;
+        height: 100%;
+        margin-bottom: 20px;
+    }
+    .card:hover {
+        transform: scale(1.02);
+        background-color: #333333 !important;
+    }
+
+    /* 카드 제목 */
+    .card-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #81d4fa;
+        margin-bottom: 10px;
+    }
+
+    /* 카드 설명 텍스트 */
+    .card-desc {
+        font-size: 14px;
+        color: #bbbbbb;
+        margin-bottom: 15px;
+    }
+
+    /* 입력창 텍스트 중앙정렬 */
+    input {
+        text-align: center;
+        background-color: #2c2c2c !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #444444 !important;
+        border-radius: 5px;
+    }
+
+    /* 버튼 스타일 */
+    .stButton>button {
+        background-color: #1976d2 !important;
+        color: white !important;
+        border-radius: 5px;
+        border: none !important;
+        padding: 8px 15px !important;
+        font-weight: bold !important;
+        cursor: pointer;
+    }
+    .stButton>button:hover {
+        background-color: #1565c0 !important;
+    }
+
+    /* 텍스트 색상 통일 */
+    p, span, div, h1, h2, h3, h4, h5, h6, label {
+        color: #e0e0e0 !important;
+    }
+
+    /* 스크롤바 색상 조정 (옵션) */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #121212;
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: #1976d2;
+        border-radius: 10px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # --- 기술지표 함수 예시 ---
 def calculate_rsi(series, period=14):
