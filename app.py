@@ -349,10 +349,10 @@ st.markdown("<h2 style='text-align:center; color:#90caf9;'>📋 앱 사용 전 �
 if st.checkbox("지침 사항 보기", key="show_guideline"):
     st.markdown("""
     <div style="background-color:#222; padding:15px; border-radius:10px; margin-bottom:20px; color:#ccc;">
-    - 종목 평가 점수가 낮을시에 진입 하는것은 도박에 가깝습니다!! 지침 사항에 따라 종목 평가 점수가 60점 이상인 상황에서 들어가야 안전합니다.
+    - 종목 평가 점수가 낮을시에 진입 하는것은 도박에 가깝습니다!<br>
     - 본 앱은 투자 참고용입니다. 실제 투자 결정은 본인 책임입니다.<br>
     - 실시간 데이터는 1분 가량 지연될 수 있으니 참고 바랍니다.<br>
-    - 종목명을 검색하였을 때 종목 평가 점수가 60점 이상인 상황에서 들어가야 설명 그대로의 승률이 나옵니다.<br>
+    - 종목명을 검색하였을 때 종목 평가 점수가 70점 이상인 상황에서 매수 하시는 것을 추천 드립니다.<br>
     - 문의사항은 인스타그램 <a href="https://www.instagram.com/trade_vibes.kr" target="_blank" style="color:#90caf9;">@trade_vibes.kr</a> 로 연락 바랍니다.<br>
     </div>
     """, unsafe_allow_html=True)
@@ -376,7 +376,7 @@ with col1:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종묙 평가 60점 이상 진입시)승률은 60%~70% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
+        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종묙 평가 70점 이상 진입시)승률은 50%~58% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
         show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
         if show_desc_dt:
             st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
@@ -414,7 +414,7 @@ with col2:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_swing = "Tony Cruz의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 중기 매매 전략입니다. (종목 평가 60점 이상 진입시) 승률은 55%~65% 가량 되며, 손익비는1.3~1.4:1 정도로 추정됩니다."
+        desc_text_swing = "Tony Cruz의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 중기 매매 전략입니다. (종목 평가 70점 이상 진입시) 승률은 55%~60% 가량 되며, 손익비는1.3~1.4:1 정도로 추정됩니다."
         show_desc_swing = st.checkbox("설명 보기", key="chk_desc_swing")
         if show_desc_swing:
             st.markdown(f"<div class='card-desc'>{desc_text_swing}</div>", unsafe_allow_html=True)
@@ -451,7 +451,7 @@ with col3:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_position = "Richard Dennis의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 장기 매매 전략입니다. (종목 평가 60점 이상 진입시) 승률은 50%~60% 가량 되며, 손익비는 1.5~2:1로 추정됩니다."
+        desc_text_position = "Richard Dennis의 전략을 기반으로 4가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 장기 매매 전략입니다. (종목 평가 70점 이상 진입시) 승률은 56%~65% 가량 되며, 손익비는 1.5~2:1로 추정됩니다."
         show_desc_position = st.checkbox("설명 보기", key="chk_desc_position")
         if show_desc_position:
             st.markdown(f"<div class='card-desc'>{desc_text_position}</div>", unsafe_allow_html=True)
