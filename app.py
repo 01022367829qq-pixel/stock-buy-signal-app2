@@ -1,5 +1,3 @@
-import mplfinance as mpf
-import tempfile
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -139,7 +137,7 @@ def calculate_adx(df, period=14):
 # 데이 트레이딩 점수 함수 (터틀 전략 + 보조지표)
 def score_turtle_enhanced(df):
     if df is None or df.empty or len(df) < 60:
-        return 0, "데이터가 충분하지 않습니다.", None, None, None
+        return 0, ["데이터가 충분하지 않습니다."], None, None, None
 
     df = df.copy()
     df['20d_high'] = df['High'].rolling(20).max().shift(1)
@@ -152,7 +150,7 @@ def score_turtle_enhanced(df):
 
     df.dropna(inplace=True)
     if len(df) < 1:
-        return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
+        return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
 
     close = float(df['Close'].iloc[-1])
     high20 = float(df['20d_high'].iloc[-1])
@@ -166,31 +164,31 @@ def score_turtle_enhanced(df):
 
     for val in [high20, low10, atr_val, rsi, bbw, bbw_mean, vol_mean]:
         if val is None or (isinstance(val, float) and np.isnan(val)):
-            return 0, "기술 지표 계산 중 오류 발생 (데이터 부족 가능성)", None, None, None
+            return 0, ["기술 지표 계산 중 오류 발생 (데이터 부족 가능성)"], None, None, None
 
     score = 0
     msgs = []
 
     if close > high20:
         score += 30
-        msgs.append("20일 최고가 돌파")
+        msgs.append("✅ 20일 최고가 돌파")
     if rsi < 50:
         score += 10
-        msgs.append(f"RSI({rsi:.1f}) 과매도/중립")
+        msgs.append(f"✅ RSI({rsi:.1f}) 과매도/중립")
     prev_upper = df['BB_upper'].iloc[-2] if len(df) > 1 else None
     if bbw < bbw_mean * 0.8 and close > prev_upper:
         score += 15
-        msgs.append("BB 수축 후 상단 돌파")
+        msgs.append("✅ BB 수축 후 상단 돌파")
     if vol > vol_mean * 1.2:
         score += 15
-        msgs.append("거래량 증가")
+        msgs.append("✅ 거래량 증가")
     atr_mean = df['ATR'].rolling(30).mean().iloc[-1]
     if atr_val > atr_mean:
         score += 20
-        msgs.append("ATR 증가")
+        msgs.append("✅ ATR 증가")
     if close < low10:
         score -= 20
-        msgs.append("10일 최저가 이탈 위험")
+        msgs.append("⚠️ 10일 최저가 이탈 위험")
 
     score = max(0, min(100, score))
     if not msgs:
@@ -200,7 +198,8 @@ def score_turtle_enhanced(df):
     target_price = close + (atr_val * 2)
     stop_loss = close - (atr_val * 1.5)
 
-    return score, "; ".join(msgs), entry_price, target_price, stop_loss
+    return score, msgs, entry_price, target_price, stop_loss
+
 
 # 스윙 트레이딩 점수 함수 (Tony Cruz 전략 + RSI, ADX, BB, 거래량 결합)
 def score_swing_trading(df):
@@ -351,9 +350,13 @@ col1, col2, col3 = st.columns(3)
 with col1:
     with st.container():
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
+        st.markdown("""
+<div class='card-title'>
+  1️⃣ 데이 트레이딩
+</div>
+""", unsafe_allow_html=True)
 
-        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종목 평가 60점 이상 진입시)승률은 60%~70% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
+        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종묙 평가 60점 이상 진입시)승률은 60%~70% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
         show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
         if show_desc_dt:
             st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
@@ -372,21 +375,21 @@ with col1:
                     st.info(msg)
                     if entry and target and stop:
                         st.markdown(f"""
-<div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
-<strong>&#x1F4A1; 자동 계산 진입/청산가:</strong><br>
-- 진입가: {entry:.2f}<br>
-- 목표가: {target:.2f}<br>
-- 손절가: {stop:.2f}
-</div>
-""", unsafe_allow_html=True)
-
-                        # 차트 생성 및 표시
-                        chart_path = plot_candlestick_chart_with_lines(df, entry, stop, target)
-                        st.image(chart_path, use_column_width=True)
-                        os.remove(chart_path)
-
+                        <div style='margin-top:15px; padding:10px; border:1px solid #ccc; border-radius:10px;'>
+                        <strong>💡 자동 계산 진입/청산가:</strong><br>
+                        - 진입가: {entry:.2f}<br>
+                        - 목표가: {target:.2f}<br>
+                        - 손절가: {stop:.2f}
+                        </div>
+                        """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+
+with col2:
+    with st.container():
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("""
+<div class='card-title'>
   2️⃣ 스윙 트레이딩
 </div>
 """, unsafe_allow_html=True)
