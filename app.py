@@ -212,7 +212,7 @@ def score_turtle_enhanced(df):
 
 # 최상위 레벨 (들여쓰기 없음)
 score, msg, entry, target, stop, recommendation = score_turtle_enhanced(df)
-
+return score, msgs, entry_price, target_price, stop_loss, recommendation
 
 
 
