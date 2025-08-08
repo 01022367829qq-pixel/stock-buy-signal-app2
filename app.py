@@ -353,11 +353,18 @@ with col1:
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("""
 <div class='card-title'>
-  1️⃣ 데이 트레이딩
-</div>
-""", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4CAF50;'>📈 매수 타점 분석기</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>당신의 투자 전략에 맞는 종목을 진입가, 손절가, 목표가까지 모두 빠르게 분석해보세요.</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종묙 평가 60점 이상 진입시)승률은 60%~70% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    with st.container():
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-title'>1️⃣ 데이 트레이딩</div>", unsafe_allow_html=True)
+
+        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종목 평가 60점 이상 진입시)승률은 60%~70% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
         show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
         if show_desc_dt:
             st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
@@ -381,38 +388,14 @@ with col1:
                         - 진입가: {entry:.2f}<br>
                         - 목표가: {target:.2f}<br>
                         - 손절가: {stop:.2f}
-                       def plot_candlestick_chart_with_lines(df, entry_price, stop_loss, target_price):
-    """
-    mplfinance를 사용해 캔들차트 그리고 진입/손절/목표가 선 표시 후 이미지 파일 생성 반환
-    """
-    df_plot = df.copy()
-    df_plot.index = pd.DatetimeIndex(df_plot.index)
-
-    addplots = [
-        mpf.make_addplot([entry_price]*len(df_plot), type='line', color='yellow', linestyle='-', width=1, panel=0, ylabel='Entry'),
-        mpf.make_addplot([stop_loss]*len(df_plot), type='line', color='red', linestyle='--', width=1, panel=0, ylabel='Stop Loss'),
-        mpf.make_addplot([target_price]*len(df_plot), type='line', color='lime', linestyle='--', width=1, panel=0, ylabel='Target'),
-    ]
-
-    # 임시파일 생성 (png)
-    tmpfile = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-    mpf.plot(
-        df_plot,
-        type='candle',
-        style='charles',
-        addplot=addplots,
-        volume=True,
-        mav=(5, 10),
-        figsize=(10, 6),
-        tight_layout=True,
-        savefig=tmpfile.name
-    )
-    tmpfile.close()
-    return tmpfile.name
                         </div>
                         """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
+                        # 차트 생성 및 표시
+                        chart_path = plot_candlestick_chart_with_lines(df, entry, stop, target)
+                        st.image(chart_path, use_column_width=True)
+                        os.remove(chart_path)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
     with st.container():
