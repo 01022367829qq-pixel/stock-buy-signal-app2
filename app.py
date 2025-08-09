@@ -77,11 +77,12 @@ def get_tickers_for_group(group_name):
     if group_name == "S&P 500":
         return get_sp500_tickers()
     elif group_name == "Nasdaq 100":
-        # 나스닥100 간단 샘플 (필요시 최신 CSV로 교체)
+        # 나스닥100 간단 샘플 (필요시 최신 CSV로 교체 가능)
         return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META"]
     elif group_name == "Dow Jones 30":
         return ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD"]
     elif group_name == "Russell 2000":
+        # 러셀 2000 샘플 (일부)
         return ["TROV", "IDEX", "TENB", "XELA", "OMEX"]
     elif group_name == "Sector ETFs":
         return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
@@ -92,9 +93,16 @@ def get_tickers_for_group(group_name):
 
 st.title("그룹별 매수 신호 종목 분석기")
 
-selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs", "Russell 2000"])
+selected_group = st.selectbox(
+    "그룹 선택",
+    options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs", "Russell 2000"]
+)
 
-method = st.radio("분석 기법 선택 (하나만 선택)", options=["Elliot Wave", "Moving Average", "RSI"], index=1)
+method = st.radio(
+    "분석 기법 선택 (하나만 선택)",
+    options=["Elliot Wave", "Moving Average", "RSI"],
+    index=1
+)
 
 if st.button("분석 시작"):
 
