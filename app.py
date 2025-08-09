@@ -67,7 +67,7 @@ def score_for_signal(method, df):
 # --- 티커 그룹 리스트 URL ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-# DJ30_TICKERS_URL 은 더 이상 사용하지 않습니다.
+DJ30_TICKERS_URL = "https://raw.githubusercontent.com/datasets/dow-jones/master/data/dow-jones.csv"
 
 @st.cache_data(ttl=3600)
 def get_sp500_tickers():
@@ -76,33 +76,16 @@ def get_sp500_tickers():
 
 @st.cache_data(ttl=3600)
 def get_dj30_tickers():
-    # 다우존스 30 티커 직접 입력 (하드코딩)
-    return [
-        "AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "GS", "MCD", "NKE",
-        "TRV", "UNH", "VZ", "WBA", "WMT", "CVX", "IBM", "INTC", "KO", "PG",
-        "RTX", "CRM", "CAT", "AXP", "DD", "MRK", "CSCO", "BA", "MMM", "DOW"
-    ]
+    df = pd.read_csv(DJ30_TICKERS_URL)
+    return df['Symbol'].unique().tolist()
 
 @st.cache_data(ttl=3600)
 def get_nasdaq100_tickers():
     # 나스닥 100은 URL에서 안 읽히는 경우가 많아서 하드코딩으로 예시
-    return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "ADBE",
-        "CMCSA", "INTC", "NFLX", "PYPL", "TXN", "AVGO", "QCOM", "AMD", "COST", "AMGN",
-        "SBUX", "ISRG", "CHTR", "MDLZ", "BKNG", "GILD", "FISV", "ADP", "LRCX", "ILMN",
-        "MELI", "ATVI", "JD", "REGN", "MAR", "ZM", "KHC", "SNPS", "MNST", "BIIB",
-        "CTAS", "EA", "EXC", "ROST", "IDXX", "ORLY", "ASML", "EBAY", "SIRI", "WDAY",
-        "XLNX", "ADSK", "ALGN", "MCHP", "WBA", "CDNS", "ANSS", "VRSN", "FAST", "BIDU",
-        "XEL", "CTSH", "KLAC", "ILMN", "PCAR", "ORLY", "LULU", "VRSK", "SNPS", "IDXX",
-        "SPLK", "INCY", "WDC", "CDW", "SWKS", "NTES", "ZS", "LBTYA", "KLAC", "ROKU",
-        "DLTR", "ALXN", "NTAP", "DOCU", "MSTR", "SPLK", "VRSN", "XLNX", "ANSS"]
+    return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "ADBE"]
 
 def get_sector_etf_tickers():
     return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
-
-def get_russell2000_tickers():
-    # 러셀 2000 CSV URL 직접 못읽을 경우 수동 준비 필요
-    # 임시 샘플
-    return ["TROV", "IDEX", "TENB", "XELA", "OMEX"]
 
 def get_tickers_for_group(group_name):
     if group_name == "S&P 500":
@@ -111,8 +94,6 @@ def get_tickers_for_group(group_name):
         return get_nasdaq100_tickers()
     elif group_name == "Dow Jones 30":
         return get_dj30_tickers()
-    elif group_name == "Russell 2000":
-        return get_russell2000_tickers()
     elif group_name == "Sector ETFs":
         return get_sector_etf_tickers()
     else:
@@ -122,7 +103,7 @@ def get_tickers_for_group(group_name):
 
 st.title("그룹별 매수 신호 종목 분석기")
 
-selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs", "Russell 2000"])
+selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs"])
 
 method = st.radio("분석 기법 선택 (하나만 선택)", options=["Elliot Wave", "Moving Average", "RSI"], index=1)
 
