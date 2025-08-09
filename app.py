@@ -64,47 +64,43 @@ def score_for_signal(method, df):
         msg = "RSI 과매도 구간 감지"
     return score, msg
 
-# --- 티커 그룹 리스트 수집 (캐시 적용) ---
+# --- 티커 그룹 리스트 ---
+
+SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
 @st.cache_data(ttl=3600)
 def get_sp500_tickers():
-    url = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-    df = pd.read_csv(url)
+    df = pd.read_csv(SP500_TICKERS_URL)
     return df['Symbol'].tolist()
 
-@st.cache_data(ttl=3600)
 def get_nasdaq100_tickers():
-    url = "https://datahub.io/core/nasdaq-listings/r/nasdaq-listed-symbols.csv"
-    df = pd.read_csv(url)
-    # NASDAQ 100 공식 리스트가 아니므로, 예시로 NASDAQ 상장 기업 중 시총 상위 필터 가능 (여기선 그냥 상장된 NASDAQ 기업)
-    # 정확한 나스닥100 리스트는 별도 공개 소스 참고 필요 (직접 수동 관리 추천)
-    # 여기선 일단 전체 NASDAQ 상장 티커 반환 (테스트 목적)
-    return df['Symbol'].tolist()
+    # 샘플 나스닥 100 티커 리스트 (100개)
+    return [
+        "AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP",
+        "INTC", "CMCSA", "ADBE", "CSCO", "AVGO", "TXN", "QCOM", "NFLX",
+        "COST", "AMGN", "CHTR", "SBUX", "GILD", "ISRG", "AMD", "BKNG",
+        "FISV", "MDLZ", "ADI", "MU", "ZM", "LRCX", "REGN", "BIIB",
+        "CSX", "IDXX", "EXC", "ATVI", "EA", "MELI", "MAR", "WDAY",
+        "NXPI", "SNPS", "ALGN", "ILMN", "CDNS", "KLAC", "CTAS", "XEL",
+        "WBA", "ROST", "MRVL", "VRSK", "ASML", "BIDU", "JD", "DOCU",
+        "FAST", "SIRI", "EBAY", "TEAM", "MTCH", "OKTA", "ORLY", "PCAR",
+        "VRSN", "XLNX", "WDAY", "ZS", "TTWO", "MCHP", "SPLK", "LULU",
+        "SWKS", "ANSS", "SNPS", "CDW", "ADSK", "CERN", "MCHP", "INCY",
+        "MRNA", "PAYX", "UAL", "CTSH", "ROKU", "LULU", "ALXN", "FTNT",
+        "DLTR", "INCY", "CERN", "MRNA", "PAYX"
+    ]
 
-@st.cache_data(ttl=3600)
 def get_dowjones30_tickers():
-    # Dow Jones 30 공식 리스트가 너무 작으므로 직접 하드코딩 권장
-    return [
-        "AAPL", "MSFT", "JPM", "V", "JNJ", "WMT", "PG", "UNH",
-        "HD", "DIS", "INTC", "MRK", "CVX", "VZ", "CSCO", "KO",
-        "TRV", "IBM", "MCD", "NKE", "AXP", "BA", "CAT", "MMM",
-        "GS", "DOW", "CSX", "RTX", "AMGN", "CRM"
-    ]
+    return ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "INTC", "WMT", "UNH",
+            "PG", "CVX", "KO", "MRK", "VZ", "CSCO", "BA", "IBM", "MCD", "MMM",
+            "TRV", "AXP", "CAT", "GS", "NKE", "RTX", "DWDP", "XOM", "JNJ", "WBA"]
 
-@st.cache_data(ttl=3600)
 def get_russell2000_tickers():
-    # 러셀2000 전체 리스트 공개 URL이 별도로 없고 너무 많아, 보통 수동관리 혹은 API사용 권장
-    # 여기서는 대표 샘플 티커 일부만 반환 (실제 리스트는 별도 수집 필요)
-    return [
-        "TROV", "IDEX", "TENB", "XELA", "OMEX", "MRTN", "GOGO", "INSG"
-    ]
+    # 러셀 2000 전체 리스트는 너무 많으니 샘플로 일부만
+    return ["TROV", "IDEX", "TENB", "XELA", "OMEX", "SPSC", "BLBD", "SRPT", "WKHS", "IDEX"]
 
-def get_sector_etfs():
-    # 미국 대표 섹터 ETF 모음 (12개 대표 ETF)
-    return [
-        "XLB", "XLE", "XLF", "XLI", "XLK", "XLP",
-        "XLRE", "XLU", "XLV", "XLY", "VOX", "VGT"
-    ]
+def get_sector_etf_tickers():
+    return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
 
 def get_tickers_for_group(group_name):
     if group_name == "S&P 500":
@@ -116,7 +112,7 @@ def get_tickers_for_group(group_name):
     elif group_name == "Russell 2000":
         return get_russell2000_tickers()
     elif group_name == "Sector ETFs":
-        return get_sector_etfs()
+        return get_sector_etf_tickers()
     else:
         return []
 
@@ -124,13 +120,7 @@ def get_tickers_for_group(group_name):
 
 st.title("그룹별 매수 신호 종목 분석기")
 
-selected_group = st.selectbox("그룹 선택", options=[
-    "Nasdaq 100",
-    "S&P 500",
-    "Dow Jones 30",
-    "Sector ETFs",
-    "Russell 2000"
-])
+selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs", "Russell 2000"])
 
 method = st.radio("분석 기법 선택 (하나만 선택)", options=["Elliot Wave", "Moving Average", "RSI"], index=1)
 
@@ -145,12 +135,7 @@ if st.button("분석 시작"):
 
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
-        try:
-            df = yf.download(ticker, period="6mo", interval="1d", progress=False)
-        except Exception as e:
-            status_text.text(f"{ticker} 다운로드 실패: {e}")
-            continue
-
+        df = yf.download(ticker, period="6mo", interval="1d", progress=False)
         if df.empty or len(df) < 60:
             continue
         
