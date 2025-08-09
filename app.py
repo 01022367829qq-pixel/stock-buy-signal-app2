@@ -100,7 +100,7 @@ def get_russell2000_tickers():
     return ["TROV", "IDEX", "TENB", "XELA", "OMEX", "SPSC", "BLBD", "SRPT", "WKHS", "IDEX"]
 
 def get_sector_etf_tickers():
-    return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
+    return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU", "XLE", "XLP", "XLB", "XLC"]
 
 def get_tickers_for_group(group_name):
     if group_name == "S&P 500":
