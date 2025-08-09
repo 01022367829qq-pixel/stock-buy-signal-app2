@@ -64,11 +64,10 @@ def score_for_signal(method, df):
         msg = "RSI 과매도 구간 감지"
     return score, msg
 
-# --- 티커 그룹 리스트 및 함수들 ---
+# --- 티커 그룹 리스트 URL ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-DJ30_TICKERS_URL = "https://datahub.io/core/dow-jones/r/dow-jones.csv"
-RUSSELL2000_CSV_URL = "https://raw.githubusercontent.com/ikoniaris/Russell2000/master/cik_ticker.csv"
+DJ30_TICKERS_URL = "https://raw.githubusercontent.com/datasets/dow-jones/master/data/dow-jones.csv"
 
 @st.cache_data(ttl=3600)
 def get_sp500_tickers():
@@ -81,27 +80,17 @@ def get_dj30_tickers():
     return df['Symbol'].unique().tolist()
 
 @st.cache_data(ttl=3600)
-def get_russell2000_tickers():
-    df = pd.read_csv(RUSSELL2000_CSV_URL)
-    # 'Ticker' 컬럼에 티커가 있음, 혹시 데이터 구조 다르면 확인 필요
-    return df['Ticker'].dropna().tolist()
+def get_nasdaq100_tickers():
+    # 나스닥 100은 URL에서 안 읽히는 경우가 많아서 하드코딩으로 예시
+    return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "ADBE"]
 
 def get_sector_etf_tickers():
     return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
 
-def get_nasdaq100_tickers():
-    # 나스닥 100 전체 티커 직접 입력 (일부만 예시)
-    return [
-        "AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "AVGO",
-        "ADBE", "INTC", "CMCSA", "TXN", "QCOM", "AMGN", "SBUX", "MDLZ", "PYPL", "GILD",
-        "FISV", "CHTR", "ISRG", "BKNG", "MU", "CSX", "LRCX", "KHC", "REGN", "ADP",
-        "VRTX", "EXC", "MAR", "IDXX", "CTAS", "BIIB", "EBAY", "ILMN", "MELI", "ASML",
-        "FAST", "CDNS", "MNST", "NTES", "XLNX", "ROST", "SNPS", "SWKS", "CTSH", "ORLY",
-        "WBA", "SIRI", "MRVL", "CDW", "LULU", "INCY", "PCAR", "ANSS", "VRSN", "PAYX",
-        "JD", "WDC", "XEL", "ALGN", "BIDU", "ANET", "NXPI", "VRSK", "CERN", "SGEN",
-        "BMRN", "CPRT", "MCHP", "DXCM", "SWKS", "UAL", "TTWO", "ZM", "CRWD", "ZS",
-        "OKTA", "FIS", "DOCU", "SNAP", "FANG", "LBTYK", "JD", "NVDA"
-    ]
+def get_russell2000_tickers():
+    # 러셀 2000 CSV URL 직접 못읽을 경우 수동 준비 필요
+    # 임시 샘플
+    return ["TROV", "IDEX", "TENB", "XELA", "OMEX"]
 
 def get_tickers_for_group(group_name):
     if group_name == "S&P 500":
@@ -139,7 +128,7 @@ if st.button("분석 시작"):
         df = yf.download(ticker, period="6mo", interval="1d", progress=False)
         if df.empty or len(df) < 60:
             continue
-        
+
         score, msg = score_for_signal(method, df)
         if score > 0:
             entry = df['Close'].iat[-1]
