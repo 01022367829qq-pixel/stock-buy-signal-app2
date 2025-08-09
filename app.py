@@ -376,7 +376,7 @@ with col1:
 </div>
 """, unsafe_allow_html=True)
 
-        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종목 평가 70점 이상 진입시)승률은 50%~58% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
+        desc_text_dt = "Richard Dennis의 추세추종 전략을 기반으로 5가지의 보조지표를 추가하여 목표가와 손절가, 진입가를 정해주는 일일 단기 매매 전략입니다. (종묙 평가 70점 이상 진입시)승률은 50%~58% 가량 되며, 손익비는 1.33:1 정도로 추정됩니다."
         show_desc_dt = st.checkbox("설명 보기", key="chk_desc_dt")
         if show_desc_dt:
             st.markdown(f"<div class='card-desc'>{desc_text_dt}</div>", unsafe_allow_html=True)
@@ -402,31 +402,14 @@ with col1:
                         - 손절가: {stop:.2f}
                         </div>
                         """, unsafe_allow_html=True)
-
-                        # 캔들차트 그리기 (들여쓰기 반드시 맞춰야 함)
-                        fig = go.Figure(data=[go.Candlestick(
-                            x=df.index,
-                            open=df['Open'],
-                            high=df['High'],
-                            low=df['Low'],
-                            close=df['Close'],
-                            increasing_line_color='green',
-                            decreasing_line_color='red',
-                            name=ticker.upper()
-                        )])
-                        fig.update_layout(
-                            title=f"{ticker.upper()} 일간 캔들 차트",
-                            xaxis_title="날짜",
-                            yaxis_title="가격",
-                            xaxis_rangeslider_visible=False,
-                            template="plotly_dark"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-
-
+with col2:
+    with st.container():
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("""
+<div class='card-title'>
   2️⃣ 스윙 트레이딩
 </div>
 """, unsafe_allow_html=True)
