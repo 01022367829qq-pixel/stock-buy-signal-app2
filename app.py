@@ -20,7 +20,6 @@ def is_buy_signal_elliot(df):
     close = df['Close']
     if len(close) < 5:
         return False
-    # 최근 3봉이 상승 중인지 체크 (임시)
     try:
         return (close.iat[-3] < close.iat[-2]) and (close.iat[-2] < close.iat[-1])
     except Exception:
@@ -32,20 +31,23 @@ def is_buy_signal_ma(df):
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
     # NaN 체크
-    if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
-        return False
-    if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
-        return False
     try:
+        if bool(short_ma.isna().iloc[-2]) or bool(short_ma.isna().iloc[-1]):
+            return False
+        if bool(long_ma.isna().iloc[-2]) or bool(long_ma.isna().iloc[-1]):
+            return False
         return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
     except Exception:
         return False
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0 or bool(rsi.isna().iat[-1]):
+    if len(rsi) == 0:
         return False
     try:
+        is_nan = rsi.isna().iloc[-1]
+        if is_nan:
+            return False
         return rsi.iat[-1] <= 40
     except Exception:
         return False
@@ -98,7 +100,6 @@ if st.button("분석 시작"):
         
         score, msg = score_for_signal(methods, df)
         if score > 0:
-            # 진입가, 목표가, 손절가 간단 예시 (수정 가능)
             entry = df['Close'].iat[-1]
             target = entry * 1.05
             stop = entry * 0.95
@@ -111,6 +112,7 @@ if st.button("분석 시작"):
                 "stop": stop,
                 "data": df
             })
+
     if not buy_stocks:
         st.info("매수 신호가 감지된 종목이 없습니다.")
     else:
