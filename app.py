@@ -17,30 +17,29 @@ def compute_rsi(series, period=14):
     return rsi
 
 def is_buy_signal_elliot(df):
-    # 엘리엇 웨이브 단순 조건 예시 (임시)
-    # 실제로는 더 복잡하므로 간단한 변곡점 조건 정도로 구현
     close = df['Close']
     if len(close) < 5:
         return False
-    # 최근 3봉이 상승 중인지 체크 (임시)
-    return (close.iloc[-3] < close.iloc[-2] < close.iloc[-1])
+    # 비교식을 분리해서 작성
+    return (close.iloc[-3] < close.iloc[-2]) and (close.iloc[-2] < close.iloc[-1])
 
 def is_buy_signal_ma(df):
     if len(df) < 51:
         return False
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
-    # NaN 체크
     if pd.isna(short_ma.iloc[-2]) or pd.isna(short_ma.iloc[-1]):
         return False
     if pd.isna(long_ma.iloc[-2]) or pd.isna(long_ma.iloc[-1]):
         return False
+    # 골든크로스 조건
     return (short_ma.iloc[-2] < long_ma.iloc[-2]) and (short_ma.iloc[-1] > long_ma.iloc[-1])
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
     if rsi.empty or pd.isna(rsi.iloc[-1]):
         return False
+    # 과매도 구간 예시
     return rsi.iloc[-1] <= 40
 
 def score_for_signal(methods, df):
@@ -57,7 +56,7 @@ def score_for_signal(methods, df):
         msgs.append("RSI 과매도 구간 감지")
     return score, ", ".join(msgs)
 
-# --- 섹터별 티커 예시 (간단하게 일부만) ---
+# --- 섹터별 티커 예시 ---
 SECTORS = {
     "Technology": ["AAPL", "MSFT", "GOOGL", "INTC", "CSCO"],
     "Healthcare": ["JNJ", "PFE", "MRK", "ABBV", "TMO"],
@@ -91,7 +90,6 @@ if st.button("분석 시작"):
         
         score, msg = score_for_signal(methods, df)
         if score > 0:
-            # 진입가, 목표가, 손절가 간단 예시 (수정 가능)
             entry = df['Close'].iloc[-1]
             target = entry * 1.05
             stop = entry * 0.95
