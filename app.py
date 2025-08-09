@@ -67,7 +67,6 @@ def score_for_signal(method, df):
 # --- 티커 그룹 리스트 URL ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-DJ30_TICKERS_URL = "https://raw.githubusercontent.com/datasets/dow-jones/master/data/dow-jones.csv"
 
 @st.cache_data(ttl=3600)
 def get_sp500_tickers():
@@ -75,14 +74,29 @@ def get_sp500_tickers():
     return df['Symbol'].tolist()
 
 @st.cache_data(ttl=3600)
-def get_dj30_tickers():
-    df = pd.read_csv(DJ30_TICKERS_URL)
-    return df['Symbol'].unique().tolist()
+def get_nasdaq100_tickers():
+    # 나스닥 100 직접 입력 100개 (예시 - 필요시 더 추가 가능)
+    return [
+        "AAPL","MSFT","AMZN","TSLA","NVDA","GOOGL","META","PEP","CSCO","ADBE",
+        "PYPL","INTC","CMCSA","NFLX","TXN","QCOM","CHTR","AMD","SBUX","ISRG",
+        "FISV","MDLZ","AMAT","GILD","BKNG","LRCX","ADI","MU","MRVL","KLAC",
+        "MELI","MAR","ATVI","CDNS","CSX","XEL","NXPI","WDAY","ALGN","CTAS",
+        "KDP","EBAY","REGN","BIIB","CERN","EXC","IDXX","WBA","SIRI","ANSS",
+        "EA","VRSK","ROST","CTSH","CDW","ODFL","ULTA","PCAR","SGEN","BIDU",
+        "NTES","DLTR","ORLY","FAST","LULU","ILMN","ASML","MCHP","SNPS","VRSN",
+        "SPLK","XCOM","CHKP","DOCU","TTWO","ATRS","BMRN","VEEV","WDC","ZM",
+        "ANET","SWKS","PAYX","INCY","FIS","MTCH","ZS","XLNX","MRNA","CRWD",
+        "NET","TEAM","OKTA","SNOW","DDOG","MDB","PLTR"
+    ]
 
 @st.cache_data(ttl=3600)
-def get_nasdaq100_tickers():
-    # 나스닥 100은 URL에서 안 읽히는 경우가 많아서 하드코딩으로 예시
-    return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "ADBE"]
+def get_dj30_tickers():
+    # 다우존스 30 직접 입력
+    return [
+        "AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "INTC", "KO",
+        "MRK", "NKE", "PG", "TRV", "UNH", "VZ", "WMT", "GS", "CRM", "MCD",
+        "IBM", "AXP", "CSCO", "BA", "CAT", "CVX", "DOW", "XOM", "WBA", "RTX"
+    ]
 
 def get_sector_etf_tickers():
     return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
