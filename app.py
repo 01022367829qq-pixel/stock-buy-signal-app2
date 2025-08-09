@@ -67,7 +67,7 @@ def score_for_signal(method, df):
 # --- 티커 그룹 리스트 URL ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-DJ30_TICKERS_URL = "https://raw.githubusercontent.com/datasets/dow-jones/master/data/dow-jones.csv"
+# DJ30_TICKERS_URL 은 더 이상 사용하지 않습니다.
 
 @st.cache_data(ttl=3600)
 def get_sp500_tickers():
@@ -76,8 +76,12 @@ def get_sp500_tickers():
 
 @st.cache_data(ttl=3600)
 def get_dj30_tickers():
-    df = pd.read_csv(DJ30_TICKERS_URL)
-    return df['Symbol'].unique().tolist()
+    # 다우존스 30 티커 직접 입력 (하드코딩)
+    return [
+        "AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "GS", "MCD", "NKE",
+        "TRV", "UNH", "VZ", "WBA", "WMT", "CVX", "IBM", "INTC", "KO", "PG",
+        "RTX", "CRM", "CAT", "AXP", "DD", "MRK", "CSCO", "BA", "MMM", "DOW"
+    ]
 
 @st.cache_data(ttl=3600)
 def get_nasdaq100_tickers():
