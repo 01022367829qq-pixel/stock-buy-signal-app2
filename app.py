@@ -423,6 +423,10 @@ with col1:
                         )
                         st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
+
+
+
+
   2️⃣ 스윙 트레이딩
 </div>
 """, unsafe_allow_html=True)
