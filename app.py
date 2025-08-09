@@ -64,36 +64,44 @@ def score_for_signal(method, df):
         msg = "RSI 과매도 구간 감지"
     return score, msg
 
-# --- 티커 그룹 함수들 ---
+# --- 티커 그룹 리스트 및 함수들 ---
+
+SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
+DJ30_TICKERS_URL = "https://datahub.io/core/dow-jones/r/dow-jones.csv"
+RUSSELL2000_CSV_URL = "https://raw.githubusercontent.com/ikoniaris/Russell2000/master/cik_ticker.csv"
 
 @st.cache_data(ttl=3600)
 def get_sp500_tickers():
-    url = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-    df = pd.read_csv(url)
+    df = pd.read_csv(SP500_TICKERS_URL)
     return df['Symbol'].tolist()
 
 @st.cache_data(ttl=3600)
-def get_nasdaq100_tickers():
-    url = "https://raw.githubusercontent.com/datasets/nasdaq-listings/master/nasdaq-listed-symbols.csv"
-    df = pd.read_csv(url)
-    # 나스닥 100은 별도 필터링 필요하지만 여기선 대략 나스닥 상장 종목 가져오기 예시
-    # 필요시 따로 나스닥 100 리스트를 파일 등으로 관리할 수 있음
-    return df['Symbol'].tolist()
+def get_dj30_tickers():
+    df = pd.read_csv(DJ30_TICKERS_URL)
+    return df['Symbol'].unique().tolist()
 
-def get_dowjones30_tickers():
-    return ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "INTC", "CSCO", "WMT",
-            "PG", "UNH", "CVX", "NKE", "MRK", "IBM", "KO", "TRV", "MMM", "AXP",
-            "GS", "BA", "CAT", "MCD", "VZ", "WBA", "DOW", "RTX", "JNJ", "CRM"]
+@st.cache_data(ttl=3600)
+def get_russell2000_tickers():
+    df = pd.read_csv(RUSSELL2000_CSV_URL)
+    # 'Ticker' 컬럼에 티커가 있음, 혹시 데이터 구조 다르면 확인 필요
+    return df['Ticker'].dropna().tolist()
 
 def get_sector_etf_tickers():
     return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
 
-@st.cache_data(ttl=3600)
-def get_russell2000_tickers():
-    url = "https://raw.githubusercontent.com/ikoniaris/Russell2000/master/cik_ticker.csv"
-    df = pd.read_csv(url)
-    tickers = df['Ticker'].dropna().unique().tolist()
-    return tickers
+def get_nasdaq100_tickers():
+    # 나스닥 100 전체 티커 직접 입력 (일부만 예시)
+    return [
+        "AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "AVGO",
+        "ADBE", "INTC", "CMCSA", "TXN", "QCOM", "AMGN", "SBUX", "MDLZ", "PYPL", "GILD",
+        "FISV", "CHTR", "ISRG", "BKNG", "MU", "CSX", "LRCX", "KHC", "REGN", "ADP",
+        "VRTX", "EXC", "MAR", "IDXX", "CTAS", "BIIB", "EBAY", "ILMN", "MELI", "ASML",
+        "FAST", "CDNS", "MNST", "NTES", "XLNX", "ROST", "SNPS", "SWKS", "CTSH", "ORLY",
+        "WBA", "SIRI", "MRVL", "CDW", "LULU", "INCY", "PCAR", "ANSS", "VRSN", "PAYX",
+        "JD", "WDC", "XEL", "ALGN", "BIDU", "ANET", "NXPI", "VRSK", "CERN", "SGEN",
+        "BMRN", "CPRT", "MCHP", "DXCM", "SWKS", "UAL", "TTWO", "ZM", "CRWD", "ZS",
+        "OKTA", "FIS", "DOCU", "SNAP", "FANG", "LBTYK", "JD", "NVDA"
+    ]
 
 def get_tickers_for_group(group_name):
     if group_name == "S&P 500":
@@ -101,11 +109,11 @@ def get_tickers_for_group(group_name):
     elif group_name == "Nasdaq 100":
         return get_nasdaq100_tickers()
     elif group_name == "Dow Jones 30":
-        return get_dowjones30_tickers()
-    elif group_name == "Sector ETFs":
-        return get_sector_etf_tickers()
+        return get_dj30_tickers()
     elif group_name == "Russell 2000":
         return get_russell2000_tickers()
+    elif group_name == "Sector ETFs":
+        return get_sector_etf_tickers()
     else:
         return []
 
