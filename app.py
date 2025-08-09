@@ -13,9 +13,14 @@ def compute_rsi(series, period=14):
 
 def is_buy_signal(df):
     rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0 or pd.isna(rsi.iloc[-1]):
+    if not isinstance(rsi, pd.Series):
         return False
-    return rsi.iloc[-1] < 30
+    if len(rsi) == 0:
+        return False
+    last_rsi = rsi.iloc[-1]
+    if isinstance(last_rsi, (pd.Series, pd.DataFrame)) or pd.isna(last_rsi):
+        return False
+    return last_rsi < 30
 
 def calc_prices(df):
     entry = df['Close'].iloc[-1]
