@@ -65,31 +65,30 @@ def score_for_signal(method, df):
         msgs.append("RSI 과매도 구간 감지")
     return score, ", ".join(msgs)
 
-# --- 섹터별 티커 예시 (간단하게 일부만) ---
-SECTORS = {
-    "Technology": ["AAPL", "MSFT", "GOOGL", "INTC", "CSCO"],
-    "Healthcare": ["JNJ", "PFE", "MRK", "ABBV", "TMO"],
-    "Finance": ["JPM", "BAC", "WFC", "C", "GS"],
-    "Consumer Discretionary": ["AMZN", "TSLA", "HD", "MCD", "NKE"],
-    "Industrials": ["BA", "CAT", "DE", "GE", "MMM"],
-    "Utilities": ["NEE", "DUK", "SO", "AEP", "EXC"]
+# --- 그룹별 티커 예시 (샘플 일부) ---
+GROUPS = {
+    "Nasdaq 100": ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META"],
+    "S&P 500": ["AAPL", "MSFT", "AMZN", "JNJ", "JPM", "XOM", "WMT"],
+    "Dow Jones 30": ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD"],
+    "Sector ETFs": ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"],
+    "Russell 2000": ["TROV", "IDEX", "TENB", "XELA", "OMEX"]  # 러셀 2000 대표 소형주 예시
 }
 
-st.title("섹터별 매수 신호 종목 분석기")
+st.title("주식 그룹별 매수 신호 종목 분석기")
 
-# 1. 섹터 선택
-selected_sector = st.selectbox("섹터 선택", options=list(SECTORS.keys()))
+# 1. 그룹 선택
+selected_group = st.selectbox("그룹 선택", options=list(GROUPS.keys()))
 
-# 2. 기법 선택 (radio로 변경: 하나만 선택 가능)
+# 2. 기법 선택 (하나만 선택)
 method = st.radio(
     "분석 기법 선택",
     options=["Elliot Wave", "Moving Average", "RSI"],
-    index=1  # 기본값 'Moving Average' 선택
+    index=1
 )
 
 if st.button("분석 시작"):
 
-    tickers = SECTORS[selected_sector]
+    tickers = GROUPS[selected_group]
     buy_stocks = []
 
     for ticker in tickers:
