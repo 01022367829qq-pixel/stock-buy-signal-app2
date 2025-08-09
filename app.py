@@ -3,7 +3,6 @@ import yfinance as yf
 import plotly.graph_objects as go
 import pandas as pd
 
-# RSI 계산 함수
 def compute_rsi(series, period=14):
     delta = series.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
@@ -12,26 +11,22 @@ def compute_rsi(series, period=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-# 간단 매수 신호 판단 (RSI < 30일 때 매수 신호)
 def is_buy_signal(df):
     rsi = compute_rsi(df['Close'])
-    if rsi.empty or pd.isna(rsi.iloc[-1]):
+    if len(rsi) == 0 or pd.isna(rsi.iloc[-1]):
         return False
     return rsi.iloc[-1] < 30
 
-# 임시 진입/목표/손절가 계산 함수 (최근 종가 기준)
 def calc_prices(df):
     entry = df['Close'].iloc[-1]
-    target = entry * 1.05   # 목표가: 5% 상승 예상
-    stop = entry * 0.95     # 손절가: 5% 하락 제한
+    target = entry * 1.05
+    stop = entry * 0.95
     return entry, target, stop
 
 st.title("섹터별 매수 신호 종목 분석 테스트")
 
-# 섹터 선택박스
 sector = st.selectbox("섹터 선택", ["Technology", "Financials", "Consumer Discretionary"])
 
-# 섹터별 샘플 티커 리스트 (테스트용)
 sector_tickers = {
     "Technology": ["AAPL", "MSFT", "NVDA"],
     "Financials": ["JPM", "BAC", "C"],
