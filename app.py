@@ -86,7 +86,15 @@ def get_dj30_tickers():
 @st.cache_data(ttl=3600)
 def get_nasdaq100_tickers():
     # 나스닥 100은 URL에서 안 읽히는 경우가 많아서 하드코딩으로 예시
-    return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "ADBE"]
+    return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "ADBE",
+        "CMCSA", "INTC", "NFLX", "PYPL", "TXN", "AVGO", "QCOM", "AMD", "COST", "AMGN",
+        "SBUX", "ISRG", "CHTR", "MDLZ", "BKNG", "GILD", "FISV", "ADP", "LRCX", "ILMN",
+        "MELI", "ATVI", "JD", "REGN", "MAR", "ZM", "KHC", "SNPS", "MNST", "BIIB",
+        "CTAS", "EA", "EXC", "ROST", "IDXX", "ORLY", "ASML", "EBAY", "SIRI", "WDAY",
+        "XLNX", "ADSK", "ALGN", "MCHP", "WBA", "CDNS", "ANSS", "VRSN", "FAST", "BIDU",
+        "XEL", "CTSH", "KLAC", "ILMN", "PCAR", "ORLY", "LULU", "VRSK", "SNPS", "IDXX",
+        "SPLK", "INCY", "WDC", "CDW", "SWKS", "NTES", "ZS", "LBTYA", "KLAC", "ROKU",
+        "DLTR", "ALXN", "NTAP", "DOCU", "MSTR", "SPLK", "VRSN", "XLNX", "ANSS"]
 
 def get_sector_etf_tickers():
     return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
