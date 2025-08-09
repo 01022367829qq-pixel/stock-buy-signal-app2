@@ -31,9 +31,9 @@ def is_buy_signal_ma(df):
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
     try:
-        if bool(short_ma.isna().iloc[-2]) or bool(short_ma.isna().iloc[-1]):
+        if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
             return False
-        if bool(long_ma.isna().iloc[-2]) or bool(long_ma.isna().iloc[-1]):
+        if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
             return False
         return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
     except Exception:
@@ -44,8 +44,7 @@ def is_buy_signal_rsi(df):
     if len(rsi) == 0:
         return False
     try:
-        is_nan = rsi.isna().iloc[-1]
-        if is_nan:
+        if rsi.isna().iat[-1]:
             return False
         return rsi.iat[-1] <= 40
     except Exception:
@@ -53,46 +52,62 @@ def is_buy_signal_rsi(df):
 
 def score_for_signal(method, df):
     score = 0
-    msgs = []
+    msg = ""
     if method == "Elliot Wave" and is_buy_signal_elliot(df):
-        score += 40
-        msgs.append("엘리엇 웨이브 매수 신호 감지")
+        score = 40
+        msg = "엘리엇 웨이브 매수 신호 감지"
     elif method == "Moving Average" and is_buy_signal_ma(df):
-        score += 30
-        msgs.append("이동평균선 골든크로스 감지")
+        score = 30
+        msg = "이동평균선 골든크로스 감지"
     elif method == "RSI" and is_buy_signal_rsi(df):
-        score += 30
-        msgs.append("RSI 과매도 구간 감지")
-    return score, ", ".join(msgs)
+        score = 30
+        msg = "RSI 과매도 구간 감지"
+    return score, msg
 
-# --- 그룹별 티커 예시 (샘플 일부) ---
-GROUPS = {
-    "Nasdaq 100": ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META"],
-    "S&P 500": ["AAPL", "MSFT", "AMZN", "JNJ", "JPM", "XOM", "WMT"],
-    "Dow Jones 30": ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD"],
-    "Sector ETFs": ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"],
-    "Russell 2000": ["TROV", "IDEX", "TENB", "XELA", "OMEX"]  # 러셀 2000 대표 소형주 예시
-}
+# --- 티커 그룹 리스트 ---
 
-st.title("주식 그룹별 매수 신호 종목 분석기")
+SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
-# 1. 그룹 선택
-selected_group = st.selectbox("그룹 선택", options=list(GROUPS.keys()))
+@st.cache_data(ttl=3600)
+def get_sp500_tickers():
+    df = pd.read_csv(SP500_TICKERS_URL)
+    return df['Symbol'].tolist()
 
-# 2. 기법 선택 (하나만 선택)
-method = st.radio(
-    "분석 기법 선택",
-    options=["Elliot Wave", "Moving Average", "RSI"],
-    index=1
-)
+def get_tickers_for_group(group_name):
+    if group_name == "S&P 500":
+        return get_sp500_tickers()
+    elif group_name == "Nasdaq 100":
+        # 나스닥100 간단 샘플 (필요시 최신 CSV로 교체)
+        return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META"]
+    elif group_name == "Dow Jones 30":
+        return ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD"]
+    elif group_name == "Russell 2000":
+        return ["TROV", "IDEX", "TENB", "XELA", "OMEX"]
+    elif group_name == "Sector ETFs":
+        return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
+    else:
+        return []
+
+# --- Streamlit UI ---
+
+st.title("그룹별 매수 신호 종목 분석기")
+
+selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs", "Russell 2000"])
+
+method = st.radio("분석 기법 선택 (하나만 선택)", options=["Elliot Wave", "Moving Average", "RSI"], index=1)
 
 if st.button("분석 시작"):
 
-    tickers = GROUPS[selected_group]
+    tickers = get_tickers_for_group(selected_group)
     buy_stocks = []
 
-    for ticker in tickers:
-        df = yf.download(ticker, period="6mo", interval="1d")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    total = len(tickers)
+
+    for i, ticker in enumerate(tickers):
+        status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
+        df = yf.download(ticker, period="6mo", interval="1d", progress=False)
         if df.empty or len(df) < 60:
             continue
         
@@ -110,6 +125,10 @@ if st.button("분석 시작"):
                 "stop": stop,
                 "data": df
             })
+        progress_bar.progress((i+1)/total)
+
+    progress_bar.empty()
+    status_text.empty()
 
     if not buy_stocks:
         st.info("매수 신호가 감지된 종목이 없습니다.")
