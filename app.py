@@ -30,11 +30,10 @@ def is_buy_signal_ma(df):
         return False
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
-    # NaN 체크
     try:
-        if bool(short_ma.isna().iloc[-2]) or bool(short_ma.isna().iloc[-1]):
+        if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
             return False
-        if bool(long_ma.isna().iloc[-2]) or bool(long_ma.isna().iloc[-1]):
+        if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
             return False
         return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
     except Exception:
@@ -45,7 +44,7 @@ def is_buy_signal_rsi(df):
     if len(rsi) == 0:
         return False
     try:
-        is_nan = rsi.isna().iloc[-1]
+        is_nan = rsi.isna().iat[-1]
         if is_nan:
             return False
         return rsi.iat[-1] <= 40
@@ -66,20 +65,21 @@ def score_for_signal(methods, df):
         msgs.append("RSI 과매도 구간 감지")
     return score, ", ".join(msgs)
 
-# --- 섹터별 티커 예시 (간단하게 일부만) ---
-SECTORS = {
-    "Technology": ["AAPL", "MSFT", "GOOGL", "INTC", "CSCO"],
-    "Healthcare": ["JNJ", "PFE", "MRK", "ABBV", "TMO"],
-    "Finance": ["JPM", "BAC", "WFC", "C", "GS"],
-    "Consumer Discretionary": ["AMZN", "TSLA", "HD", "MCD", "NKE"],
-    "Industrials": ["BA", "CAT", "DE", "GE", "MMM"],
-    "Utilities": ["NEE", "DUK", "SO", "AEP", "EXC"]
+# --- 미국 시장 대표 지수/섹터별 종목 예시 ---
+# 실제 서비스 시에는 완전한 리스트를 외부 파일이나 API로 불러오길 권장
+
+MARKET_GROUPS = {
+    "S&P 500": ["AAPL", "MSFT", "AMZN", "GOOGL", "FB", "JNJ", "JPM", "V", "PG", "NVDA"],  # 일부 샘플
+    "NASDAQ 100": ["AAPL", "MSFT", "AMZN", "GOOGL", "TSLA", "NVDA", "PYPL", "ADBE", "INTC", "CSCO"],
+    "Dow Jones": ["MMM", "AXP", "BA", "CAT", "CSCO", "CVX", "DIS", "DOW", "GS", "HD"],
+    "Russell 2000": ["AAME", "AAN", "AAOI", "AAON", "AAPL", "ABCB", "ABEO", "ABG", "ABM", "ABR"],  # 일부 샘플
+    "섹터별 (Technology)": ["AAPL", "MSFT", "GOOGL", "INTC", "CSCO"],
 }
 
-st.title("섹터별 매수 신호 종목 분석기")
+st.title("미국 주요 시장별 / 섹터별 매수 신호 종목 분석기")
 
-# 1. 섹터 선택
-selected_sector = st.selectbox("섹터 선택", options=list(SECTORS.keys()))
+# 1. 시장 또는 섹터 그룹 선택
+selected_group = st.selectbox("시장/섹터 선택", options=list(MARKET_GROUPS.keys()))
 
 # 2. 기법 선택
 methods = st.multiselect(
@@ -89,8 +89,7 @@ methods = st.multiselect(
 )
 
 if st.button("분석 시작"):
-
-    tickers = SECTORS[selected_sector]
+    tickers = MARKET_GROUPS[selected_group]
     buy_stocks = []
 
     for ticker in tickers:
