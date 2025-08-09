@@ -17,13 +17,17 @@ def compute_rsi(series, period=14):
     return rsi
 
 def is_buy_signal_elliot(df):
-    # 엘리엇 웨이브 단순 조건 예시 (임시)
-    # 실제로는 더 복잡하므로 간단한 변곡점 조건 정도로 구현
     close = df['Close']
     if len(close) < 5:
         return False
-    # 최근 3봉이 상승 중인지 체크 (임시)
-    return (close.iloc[-3] < close.iloc[-2] < close.iloc[-1])
+    # 최근 3봉 상승 체크 + NaN 체크
+    try:
+        vals = close.iloc[-3:]
+        if vals.isnull().any():
+            return False
+        return (vals.iloc[0] < vals.iloc[1] < vals.iloc[2])
+    except Exception:
+        return False
 
 def is_buy_signal_ma(df):
     if len(df) < 51:
@@ -31,15 +35,13 @@ def is_buy_signal_ma(df):
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
     # NaN 체크
-    if pd.isna(short_ma.iloc[-2]) or pd.isna(short_ma.iloc[-1]):
-        return False
-    if pd.isna(long_ma.iloc[-2]) or pd.isna(long_ma.iloc[-1]):
+    if short_ma.isnull().iloc[-2:] .any() or long_ma.isnull().iloc[-2:].any():
         return False
     return (short_ma.iloc[-2] < long_ma.iloc[-2]) and (short_ma.iloc[-1] > long_ma.iloc[-1])
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0 or pd.isna(rsi.iloc[-1]):
+    if rsi.empty or rsi.isnull().iloc[-1]:
         return False
     return rsi.iloc[-1] <= 40
 
@@ -134,3 +136,4 @@ if st.button("분석 시작"):
                 template="plotly_white"
             )
             st.plotly_chart(fig, use_container_width=True)
+
