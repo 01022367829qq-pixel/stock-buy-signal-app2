@@ -64,43 +64,36 @@ def score_for_signal(method, df):
         msg = "RSI 과매도 구간 감지"
     return score, msg
 
-# --- 티커 그룹 리스트 ---
-
-SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
+# --- 티커 그룹 함수들 ---
 
 @st.cache_data(ttl=3600)
 def get_sp500_tickers():
-    df = pd.read_csv(SP500_TICKERS_URL)
+    url = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
+    df = pd.read_csv(url)
     return df['Symbol'].tolist()
 
+@st.cache_data(ttl=3600)
 def get_nasdaq100_tickers():
-    # 샘플 나스닥 100 티커 리스트 (100개)
-    return [
-        "AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP",
-        "INTC", "CMCSA", "ADBE", "CSCO", "AVGO", "TXN", "QCOM", "NFLX",
-        "COST", "AMGN", "CHTR", "SBUX", "GILD", "ISRG", "AMD", "BKNG",
-        "FISV", "MDLZ", "ADI", "MU", "ZM", "LRCX", "REGN", "BIIB",
-        "CSX", "IDXX", "EXC", "ATVI", "EA", "MELI", "MAR", "WDAY",
-        "NXPI", "SNPS", "ALGN", "ILMN", "CDNS", "KLAC", "CTAS", "XEL",
-        "WBA", "ROST", "MRVL", "VRSK", "ASML", "BIDU", "JD", "DOCU",
-        "FAST", "SIRI", "EBAY", "TEAM", "MTCH", "OKTA", "ORLY", "PCAR",
-        "VRSN", "XLNX", "WDAY", "ZS", "TTWO", "MCHP", "SPLK", "LULU",
-        "SWKS", "ANSS", "SNPS", "CDW", "ADSK", "CERN", "MCHP", "INCY",
-        "MRNA", "PAYX", "UAL", "CTSH", "ROKU", "LULU", "ALXN", "FTNT",
-        "DLTR", "INCY", "CERN", "MRNA", "PAYX"
-    ]
+    url = "https://raw.githubusercontent.com/datasets/nasdaq-listings/master/nasdaq-listed-symbols.csv"
+    df = pd.read_csv(url)
+    # 나스닥 100은 별도 필터링 필요하지만 여기선 대략 나스닥 상장 종목 가져오기 예시
+    # 필요시 따로 나스닥 100 리스트를 파일 등으로 관리할 수 있음
+    return df['Symbol'].tolist()
 
 def get_dowjones30_tickers():
-    return ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "INTC", "WMT", "UNH",
-            "PG", "CVX", "KO", "MRK", "VZ", "CSCO", "BA", "IBM", "MCD", "MMM",
-            "TRV", "AXP", "CAT", "GS", "NKE", "RTX", "DWDP", "XOM", "JNJ", "WBA"]
-
-def get_russell2000_tickers():
-    # 러셀 2000 전체 리스트는 너무 많으니 샘플로 일부만
-    return ["TROV", "IDEX", "TENB", "XELA", "OMEX", "SPSC", "BLBD", "SRPT", "WKHS", "IDEX"]
+    return ["AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "INTC", "CSCO", "WMT",
+            "PG", "UNH", "CVX", "NKE", "MRK", "IBM", "KO", "TRV", "MMM", "AXP",
+            "GS", "BA", "CAT", "MCD", "VZ", "WBA", "DOW", "RTX", "JNJ", "CRM"]
 
 def get_sector_etf_tickers():
-    return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU", "XLE", "XLP", "XLB", "XLC"]
+    return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
+
+@st.cache_data(ttl=3600)
+def get_russell2000_tickers():
+    url = "https://raw.githubusercontent.com/ikoniaris/Russell2000/master/cik_ticker.csv"
+    df = pd.read_csv(url)
+    tickers = df['Ticker'].dropna().unique().tolist()
+    return tickers
 
 def get_tickers_for_group(group_name):
     if group_name == "S&P 500":
@@ -109,10 +102,10 @@ def get_tickers_for_group(group_name):
         return get_nasdaq100_tickers()
     elif group_name == "Dow Jones 30":
         return get_dowjones30_tickers()
-    elif group_name == "Russell 2000":
-        return get_russell2000_tickers()
     elif group_name == "Sector ETFs":
         return get_sector_etf_tickers()
+    elif group_name == "Russell 2000":
+        return get_russell2000_tickers()
     else:
         return []
 
