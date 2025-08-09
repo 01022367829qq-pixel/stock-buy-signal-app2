@@ -20,27 +20,37 @@ def is_buy_signal_elliot(df):
     close = df['Close']
     if len(close) < 5:
         return False
-    # 비교식을 분리해서 작성
-    return (close.iloc[-3] < close.iloc[-2]) and (close.iloc[-2] < close.iloc[-1])
+    try:
+        v1 = close.iat[-3]
+        v2 = close.iat[-2]
+        v3 = close.iat[-1]
+        return (v1 < v2) and (v2 < v3)
+    except Exception:
+        return False
 
 def is_buy_signal_ma(df):
     if len(df) < 51:
         return False
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
-    if pd.isna(short_ma.iloc[-2]) or pd.isna(short_ma.iloc[-1]):
+    # NaN 체크
+    if short_ma.isna().iloc[-2] or short_ma.isna().iloc[-1]:
         return False
-    if pd.isna(long_ma.iloc[-2]) or pd.isna(long_ma.iloc[-1]):
+    if long_ma.isna().iloc[-2] or long_ma.isna().iloc[-1]:
         return False
-    # 골든크로스 조건
-    return (short_ma.iloc[-2] < long_ma.iloc[-2]) and (short_ma.iloc[-1] > long_ma.iloc[-1])
+    try:
+        return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
+    except Exception:
+        return False
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if rsi.empty or pd.isna(rsi.iloc[-1]):
+    if len(rsi) == 0 or rsi.isna().iat[-1]:
         return False
-    # 과매도 구간 예시
-    return rsi.iloc[-1] <= 40
+    try:
+        return rsi.iat[-1] <= 40
+    except Exception:
+        return False
 
 def score_for_signal(methods, df):
     score = 0
@@ -68,10 +78,10 @@ SECTORS = {
 
 st.title("섹터별 매수 신호 종목 분석기")
 
-# 1. 섹터 선택
+# 섹터 선택
 selected_sector = st.selectbox("섹터 선택", options=list(SECTORS.keys()))
 
-# 2. 기법 선택
+# 기법 선택
 methods = st.multiselect(
     "분석 기법 선택",
     options=["Elliot Wave", "Moving Average", "RSI"],
@@ -79,7 +89,6 @@ methods = st.multiselect(
 )
 
 if st.button("분석 시작"):
-
     tickers = SECTORS[selected_sector]
     buy_stocks = []
 
@@ -90,7 +99,7 @@ if st.button("분석 시작"):
         
         score, msg = score_for_signal(methods, df)
         if score > 0:
-            entry = df['Close'].iloc[-1]
+            entry = df['Close'].iat[-1]
             target = entry * 1.05
             stop = entry * 0.95
             buy_stocks.append({
@@ -102,6 +111,7 @@ if st.button("분석 시작"):
                 "stop": stop,
                 "data": df
             })
+
     if not buy_stocks:
         st.info("매수 신호가 감지된 종목이 없습니다.")
     else:
