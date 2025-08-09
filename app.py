@@ -401,7 +401,25 @@ with col1:
                         - 목표가: {target:.2f}<br>
                         - 손절가: {stop:.2f}
                         </div>
-                        """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True) 
+                        fig = go.Figure(data=[go.Candlestick(
+    x=df.index,
+    open=df['Open'],
+    high=df['High'],
+    low=df['Low'],
+    close=df['Close'],
+    increasing_line_color='green',
+    decreasing_line_color='red',
+    name=ticker.upper()
+)])
+fig.update_layout(
+    title=f"{ticker.upper()} 일간 캔들 차트",
+    xaxis_title="날짜",
+    yaxis_title="가격",
+    xaxis_rangeslider_visible=False,
+    template="plotly_dark"
+)
+st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 
