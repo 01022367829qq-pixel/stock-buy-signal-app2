@@ -64,32 +64,28 @@ def score_for_signal(method, df):
         msg = "RSI 과매도 구간 감지"
     return score, msg
 
-# --- 티커 그룹 리스트 URL ---
+# --- 하드코딩 티커 리스트 ---
 
-SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
-DJ30_TICKERS_URL = "https://raw.githubusercontent.com/datasets/dow-jones/master/data/dow-jones.csv"
-
-@st.cache_data(ttl=3600)
 def get_sp500_tickers():
-    df = pd.read_csv(SP500_TICKERS_URL)
-    return df['Symbol'].tolist()
+    # 예시, 실제로는 CSV로 관리하는 게 좋음
+    return ["AAPL", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "NVDA", "JPM", "V", "JNJ"]  # 간략 샘플
 
-@st.cache_data(ttl=3600)
 def get_dj30_tickers():
-    df = pd.read_csv(DJ30_TICKERS_URL)
-    return df['Symbol'].unique().tolist()
+    # 다우존스 30 하드코딩 리스트
+    return [
+        "AAPL", "MSFT", "JPM", "V", "DIS", "HD", "IBM", "KO", "MCD", "MMM",
+        "MRK", "NKE", "PFE", "PG", "TRV", "UNH", "VZ", "WBA", "WMT", "GS",
+        "CVX", "CAT", "DOW", "AXP", "BA", "INTC", "JNJ", "CSCO", "RTX", "XOM"
+    ]
 
-@st.cache_data(ttl=3600)
 def get_nasdaq100_tickers():
-    # 나스닥 100은 URL에서 안 읽히는 경우가 많아서 하드코딩으로 예시
     return ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "PEP", "CSCO", "ADBE"]
 
 def get_sector_etf_tickers():
     return ["XLK", "XLF", "XLV", "XLY", "XLI", "XLU"]
 
 def get_russell2000_tickers():
-    # 러셀 2000 CSV URL 직접 못읽을 경우 수동 준비 필요
-    # 임시 샘플
+    # 러셀 2000 샘플
     return ["TROV", "IDEX", "TENB", "XELA", "OMEX"]
 
 def get_tickers_for_group(group_name):
