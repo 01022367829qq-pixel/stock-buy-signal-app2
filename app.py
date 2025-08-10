@@ -3,14 +3,13 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+from scipy.signal import find_peaks
 
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    if isinstance(series, pd.DataFrame):
-        series = series.squeeze()
+    # 안전하게 숫자 변환 후 처리
     series = pd.to_numeric(series, errors='coerce').dropna()
-
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -27,29 +26,6 @@ def compute_bollinger_bands(series, period=20, num_std=2):
     lower = sma - num_std * std
     return upper, lower
 
-def is_buy_signal_rsi(df):
-    rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0:
-        return False
-    try:
-        if rsi.isna().iat[-1]:
-            return False
-        return rsi.iat[-1] <= 40
-    except Exception:
-        return False
-
-def is_buy_signal_elliot_rsi_bb(df):
-    # elliot wave 기법 관련 부분 삭제하고, RSI + BB만 조건 유지
-    if len(df) < 21:
-        return False
-    # RSI 조건
-    rsi = compute_rsi(df['Close'])
-    rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
-    # 볼린저밴드 조건 (종가가 하단선 근처 또는 아래)
-    upper, lower = compute_bollinger_bands(df['Close'])
-    bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
-    return rsi_cond and bb_cond
-
 def is_buy_signal_ma(df):
     if len(df) < 51:
         return False
@@ -64,19 +40,61 @@ def is_buy_signal_ma(df):
     except Exception:
         return False
 
+def is_buy_signal_rsi(df):
+    rsi = compute_rsi(df['Close'])
+    if len(rsi) == 0:
+        return False
+    try:
+        if pd.isna(rsi.iat[-1]):
+            return False
+        return rsi.iat[-1] <= 40
+    except Exception:
+        return False
+
+def detect_wave_points(close, distance=5, prominence=None):
+    close_values = close.values
+    peaks, _ = find_peaks(close_values, distance=distance, prominence=prominence)
+    valleys, _ = find_peaks(-close_values, distance=distance, prominence=prominence)
+    return peaks, valleys
+
+def is_elliot_wave_possible(df):
+    close = df['Close']
+    if len(close) < 30:
+        return False
+    # 최대와 최소 가격 범위 기반 프로미넌스 설정
+    prominence_val = (close.max() - close.min()) * 0.05
+    try:
+        peaks, valleys = detect_wave_points(close, distance=5, prominence=prominence_val)
+        # 최소 3개의 봉우리와 2개의 골짜리가 있어야 기본적인 파동 감지 가능
+        if len(peaks) >= 3 and len(valleys) >= 2:
+            return True
+        else:
+            return False
+    except Exception:
+        return False
+
+def is_buy_signal_elliot_rsi_bb(df):
+    if len(df) < 21:
+        return False
+    elliot_cond = is_elliot_wave_possible(df)
+    rsi = compute_rsi(df['Close'])
+    rsi_cond = (not pd.isna(rsi.iat[-1])) and (rsi.iat[-1] <= 40)
+    upper, lower = compute_bollinger_bands(df['Close'])
+    bb_cond = (not pd.isna(lower.iat[-1])) and (df['Close'].iat[-1] <= lower.iat[-1])
+    return elliot_cond and rsi_cond and bb_cond
+
 def score_for_signal(method, df):
     score = 0
     msg = ""
-    # elliot wave 단독 기법 삭제
     if method == "Moving Average" and is_buy_signal_ma(df):
         score = 30
         msg = "이동평균선 골든크로스 감지"
     elif method == "RSI" and is_buy_signal_rsi(df):
         score = 30
         msg = "RSI 과매도 구간 감지"
-    elif method == "RSI+BB" and is_buy_signal_elliot_rsi_bb(df):  # 이름 변경: elliot 삭제, RSI+BB로 표기
+    elif method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
         score = 50
-        msg = "RSI+볼린저밴드 매수 신호 감지"
+        msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
     return score, msg
 
 # --- 티커 그룹 리스트 URL ---
@@ -134,7 +152,7 @@ selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500",
 
 method = st.radio(
     "분석 기법 선택 (하나만 선택)",
-    options=["Moving Average", "RSI", "RSI+BB"],
+    options=["Moving Average", "RSI", "Elliot+RSI+BB"],
     index=0
 )
 
