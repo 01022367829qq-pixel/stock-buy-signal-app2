@@ -8,11 +8,10 @@ from scipy.signal import find_peaks
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    # 1차원 시리즈로 변환 강제
-    if isinstance(series, pd.DataFrame):
-        if series.shape[1] == 1:
-            series = series.iloc[:, 0]
-        else:
+    if not isinstance(series, pd.Series):
+        try:
+            series = pd.Series(series)
+        except Exception:
             return pd.Series(dtype=float)
     series = pd.to_numeric(series, errors='coerce').dropna()
     if series.empty:
@@ -43,8 +42,6 @@ def detect_wave_points(close, distance=5, prominence=None):
     return peaks, valleys
 
 def is_elliot_wave_pattern(close):
-    if len(close) == 0:
-        return False, None
     prominence = (np.nanmax(close) - np.nanmin(close)) * 0.05
     peaks, valleys = detect_wave_points(close, distance=5, prominence=prominence)
 
@@ -91,10 +88,10 @@ def is_buy_signal_ma(df):
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if rsi.empty:
+    if len(rsi) == 0:
         return False
     try:
-        if pd.isna(rsi.iat[-1]):
+        if rsi.isna().iat[-1]:
             return False
         return rsi.iat[-1] <= 60  # RSI 기준 60으로 수정
     except Exception:
@@ -106,12 +103,12 @@ def is_buy_signal_elliot_rsi_bb(df):
     elliot_cond = is_buy_signal_elliot(df)
 
     rsi = compute_rsi(df['Close'])
-    if rsi.empty or pd.isna(rsi.iat[-1]):
+    if rsi.empty or rsi.isna().iat[-1]:
         return False
     rsi_cond = rsi.iat[-1] <= 60
 
     upper, lower = compute_bollinger_bands(df['Close'])
-    if lower.empty or pd.isna(lower.iat[-1]):
+    if lower.isna().iat[-1]:
         return False
     bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
 
@@ -205,12 +202,18 @@ if st.button("분석 시작"):
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
         df = yf.download(ticker, period="1y", interval="1d", progress=False)
-        if df.empty or len(df) < 60 or bool(df['Close'].isna().all()):
+        if df.empty or len(df) < 60:
+            continue
+
+        close_series = df['Close']
+        if not isinstance(close_series, pd.Series):
+            continue
+        if close_series.isna().sum() == len(close_series):
             continue
 
         score, msg = score_for_signal(method, df)
         if score > 0:
-            entry = df['Close'].iat[-1]
+            entry = close_series.iat[-1]
             target = entry * 1.05
             stop = entry * 0.95
             buy_stocks.append({
