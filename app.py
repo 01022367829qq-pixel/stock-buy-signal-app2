@@ -37,6 +37,7 @@ def is_buy_signal_elliot(df):
     if len(close) < 5:
         return False
     try:
+        # 단순히 최근 3일간 연속 상승인지 체크 (예시 단순 구현)
         return (close.iat[-3] < close.iat[-2]) and (close.iat[-2] < close.iat[-1])
     except Exception:
         return False
@@ -57,10 +58,10 @@ def is_buy_signal_ma(df):
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0:
+    if rsi.empty:
         return False
     try:
-        if rsi.isna().iat[-1]:
+        if pd.isna(rsi.iat[-1]):
             return False
         return rsi.iat[-1] <= 40
     except Exception:
@@ -72,12 +73,12 @@ def is_buy_signal_elliot_rsi_bb(df):
     elliot_cond = is_buy_signal_elliot(df)
     
     rsi = compute_rsi(df['Close'])
-    if rsi.empty or rsi.isna().iat[-1]:
+    if rsi.empty or pd.isna(rsi.iat[-1]):
         return False
     rsi_cond = rsi.iat[-1] <= 40
 
     upper, lower = compute_bollinger_bands(df['Close'])
-    if lower.isna().iat[-1]:
+    if lower.empty or pd.isna(lower.iat[-1]):
         return False
     bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
 
