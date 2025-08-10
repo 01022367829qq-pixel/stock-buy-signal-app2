@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide")  # 전체 페이지 레이아웃 넓게
 
 st.markdown(
-    "<h1 style='text-align: center;'>AI자동 매수타점 분석기</h1>",
+    "<h1 style='text-align: center;'>AI 매수타점 분석기</h1>",
     unsafe_allow_html=True
 )
 
