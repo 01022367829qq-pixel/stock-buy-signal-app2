@@ -5,8 +5,10 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
+# 제목 가운데 정렬
 st.markdown("<h1 style='text-align: center;'>내 투자 전략 웹사이트</h1>", unsafe_allow_html=True)
 
+# 전략 선택과 티커 입력 (왼쪽 정렬, 좁은 너비)
 col1, col2 = st.columns([1, 1])
 with col1:
     strategy = st.selectbox("전략 선택", ["전략 A", "전략 B", "전략 C"])
@@ -17,23 +19,22 @@ if ticker:
     try:
         data = yf.download(ticker, period="1mo", interval="1d")
 
-        # 멀티인덱스 컬럼이면 첫 번째 레벨로 변경
+        # 멀티인덱스 컬럼 해제
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.get_level_values(0)
 
-        st.write("컬럼명:", list(data.columns))
-
+        # 인덱스 datetime 변환
         if not isinstance(data.index, pd.DatetimeIndex):
             data.index = pd.to_datetime(data.index)
 
         required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
 
-        # 숫자형 강제 변환 전처리
+        # 숫자형 강제 변환 및 NaN 제거
         for col in required_cols:
             data[col] = pd.to_numeric(data[col], errors='coerce')
-
         data = data.dropna(subset=required_cols)
 
+        # 타입 변환
         data = data.astype({
             'Open': float,
             'High': float,
@@ -45,13 +46,14 @@ if ticker:
         if data.empty:
             st.warning(f"{ticker} 데이터가 없습니다.")
         else:
+            # 캔들차트 그리기 (가로 1.5배, 세로 1.5배)
             fig, axlist = mpf.plot(
                 data,
                 type='candle',
                 style='charles',
                 title=f"{ticker} 캔들 차트",
                 ylabel='가격',
-                figsize=(16,8),
+                figsize=(18, 9),
                 returnfig=True
             )
             st.pyplot(fig)
