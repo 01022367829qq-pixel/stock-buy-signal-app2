@@ -7,6 +7,9 @@ import plotly.graph_objects as go
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
+    # 안전하게 pandas.Series로 변환
+    if not isinstance(series, pd.Series):
+        series = pd.Series(series)
     s = pd.to_numeric(series, errors='coerce')
     delta = s.diff()
     gain = delta.where(delta > 0, 0.0)
@@ -18,9 +21,10 @@ def compute_rsi(series, period=14):
     return rsi
 
 def compute_bollinger_bands(series, period=20, num_std=2):
-    s = pd.to_numeric(series, errors='coerce')
-    sma = s.rolling(window=period).mean()
-    std = s.rolling(window=period).std()
+    if not isinstance(series, pd.Series):
+        series = pd.Series(series)
+    sma = series.rolling(window=period).mean()
+    std = series.rolling(window=period).std()
     upper = sma + num_std * std
     lower = sma - num_std * std
     return upper, lower
@@ -54,7 +58,6 @@ def is_buy_signal_elliot_rsi_bb(df):
     if df is None or df.empty or len(df) < 21:
         return False
     try:
-        # 기존 단순 엘리엇 조건: 3일 연속 상승
         close = df['Close']
         elliot_cond = (close.iat[-3] < close.iat[-2]) and (close.iat[-2] < close.iat[-1])
 
