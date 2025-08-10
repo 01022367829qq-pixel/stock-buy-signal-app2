@@ -13,13 +13,15 @@ def compute_rsi(series, period=14):
             series = pd.Series(series)
         except Exception:
             return pd.Series(dtype=float)
-    series = pd.to_numeric(series, errors='coerce')
-    # NaN 제거하지 않고 계산하되 rolling mean 전에 fillna(0) 대신 보통 이전 값 유지하기 위해 ffill 사용 가능
+    series = pd.to_numeric(series, errors='coerce').dropna()
+    if series.empty:
+        return pd.Series(dtype=float)
+    
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
-    avg_gain = gain.rolling(window=period, min_periods=period).mean()
-    avg_loss = loss.rolling(window=period, min_periods=period).mean()
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
@@ -33,7 +35,8 @@ def compute_bollinger_bands(series, period=20, num_std=2):
 
 def detect_wave_points(close, distance=5, prominence=None):
     close_arr = np.asarray(close)
-    close_arr = close_arr[~np.isnan(close_arr)]
+    if np.isnan(close_arr).any():
+        close_arr = close_arr[~np.isnan(close_arr)]
     peaks, _ = find_peaks(close_arr, distance=distance, prominence=prominence)
     valleys, _ = find_peaks(-close_arr, distance=distance, prominence=prominence)
     return peaks, valleys
@@ -41,22 +44,17 @@ def detect_wave_points(close, distance=5, prominence=None):
 def is_elliot_wave_pattern(close):
     prominence = (np.nanmax(close) - np.nanmin(close)) * 0.05
     peaks, valleys = detect_wave_points(close, distance=5, prominence=prominence)
-    
     if len(peaks) < 3 or len(valleys) < 2:
         return False, None
-    
     points = np.sort(np.concatenate((peaks, valleys)))
     if len(points) < 5:
         return False, None
-    
     wave_points = points[:5]
     wave_lengths = np.diff(close.iloc[wave_points].values)
     fib_ratios = [0.382, 0.5, 0.618, 1.0, 1.618, 2.618]
     valid_fib = any(abs(abs(wave_lengths[1]) / abs(wave_lengths[0]) - fr) < 0.1 for fr in fib_ratios)
-    
     if not valid_fib:
         return False, None
-    
     return True, wave_points
 
 def is_buy_signal_elliot(df):
@@ -85,15 +83,12 @@ def is_buy_signal_ma(df):
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    # 디버그용 출력
-    st.write(f"{df.index[-1].date()} 티커 RSI length: {len(rsi)}, NaN 개수: {rsi.isna().sum()}")
-    if len(rsi.dropna()) < 14:
-        st.write("RSI 데이터 부족 (14일 미만)")
+    if len(rsi) == 0:
         return False
     try:
         if rsi.isna().iat[-1]:
             return False
-        return rsi.iat[-1] <= 60  # 기준값 60으로 상향 조정
+        return rsi.iat[-1] <= 60  # RSI 기준 60으로 수정
     except Exception:
         return False
 
@@ -101,17 +96,14 @@ def is_buy_signal_elliot_rsi_bb(df):
     if len(df) < 21:
         return False
     elliot_cond = is_buy_signal_elliot(df)
-    
     rsi = compute_rsi(df['Close'])
     if rsi.empty or rsi.isna().iat[-1]:
         return False
-    rsi_cond = rsi.iat[-1] <= 60
-
+    rsi_cond = rsi.iat[-1] <= 60  # RSI 기준 60으로 수정
     upper, lower = compute_bollinger_bands(df['Close'])
     if lower.isna().iat[-1]:
         return False
     bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
-
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
@@ -201,7 +193,7 @@ if st.button("분석 시작"):
 
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
-        df = yf.download(ticker, period="6mo", interval="1d", progress=False)
+        df = yf.download(ticker, period="1y", interval="1d", progress=False)  # 기간 1년으로 변경
         if df.empty or len(df) < 60:
             continue
 
