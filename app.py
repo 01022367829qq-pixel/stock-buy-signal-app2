@@ -3,14 +3,14 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from scipy.signal import find_peaks
 
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    if not isinstance(series, pd.Series):
-        series = pd.Series(series)
+    if isinstance(series, pd.DataFrame):
+        series = series.squeeze()
     series = pd.to_numeric(series, errors='coerce').dropna()
+
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -27,40 +27,28 @@ def compute_bollinger_bands(series, period=20, num_std=2):
     lower = sma - num_std * std
     return upper, lower
 
-def detect_wave_points(close, distance=5, prominence=1):
-    close = pd.Series(close).dropna()
-    arr = close.values
-    if arr.ndim != 1:
-        raise ValueError("close 값은 1차원 배열이어야 합니다.")
-    peaks, _ = find_peaks(arr, distance=distance, prominence=prominence)
-    valleys, _ = find_peaks(-arr, distance=distance, prominence=prominence)
-    return peaks, valleys
-
-def is_elliot_wave_possible(df):
-    close = df['Close'].dropna()
-    if len(close) < 20:
+def is_buy_signal_rsi(df):
+    rsi = compute_rsi(df['Close'])
+    if len(rsi) == 0:
         return False
     try:
-        distance = 5
-        prominence = (close.max() - close.min()) * 0.05
-        peaks, valleys = detect_wave_points(close, distance=distance, prominence=prominence)
-        # 최소 3개의 파동점(peak+valley)이 있어야 단순 엘리엇 웨이브 가능성 가정
-        if len(peaks) + len(valleys) >= 3:
-            return True
-        else:
+        if rsi.isna().iat[-1]:
             return False
+        return rsi.iat[-1] <= 40
     except Exception:
         return False
 
 def is_buy_signal_elliot_rsi_bb(df):
+    # elliot wave 기법 관련 부분 삭제하고, RSI + BB만 조건 유지
     if len(df) < 21:
         return False
-    elliot_cond = is_elliot_wave_possible(df)
+    # RSI 조건
     rsi = compute_rsi(df['Close'])
     rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
+    # 볼린저밴드 조건 (종가가 하단선 근처 또는 아래)
     upper, lower = compute_bollinger_bands(df['Close'])
     bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
-    return elliot_cond and rsi_cond and bb_cond
+    return rsi_cond and bb_cond
 
 def is_buy_signal_ma(df):
     if len(df) < 51:
@@ -76,41 +64,19 @@ def is_buy_signal_ma(df):
     except Exception:
         return False
 
-def is_buy_signal_rsi(df):
-    rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0:
-        return False
-    try:
-        if rsi.isna().iat[-1]:
-            return False
-        return rsi.iat[-1] <= 40
-    except Exception:
-        return False
-
-def is_buy_signal_elliot(df):
-    close = df['Close']
-    if len(close) < 5:
-        return False
-    try:
-        return (close.iat[-3] < close.iat[-2]) and (close.iat[-2] < close.iat[-1])
-    except Exception:
-        return False
-
 def score_for_signal(method, df):
     score = 0
     msg = ""
-    if method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
-        score = 50
-        msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
-    elif method == "Moving Average" and is_buy_signal_ma(df):
+    # elliot wave 단독 기법 삭제
+    if method == "Moving Average" and is_buy_signal_ma(df):
         score = 30
         msg = "이동평균선 골든크로스 감지"
     elif method == "RSI" and is_buy_signal_rsi(df):
         score = 30
         msg = "RSI 과매도 구간 감지"
-    elif method == "Elliot Wave" and is_buy_signal_elliot(df):
-        score = 40
-        msg = "엘리엇 웨이브 매수 신호 감지"
+    elif method == "RSI+BB" and is_buy_signal_elliot_rsi_bb(df):  # 이름 변경: elliot 삭제, RSI+BB로 표기
+        score = 50
+        msg = "RSI+볼린저밴드 매수 신호 감지"
     return score, msg
 
 # --- 티커 그룹 리스트 URL ---
@@ -168,7 +134,7 @@ selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500",
 
 method = st.radio(
     "분석 기법 선택 (하나만 선택)",
-    options=["Moving Average", "RSI", "Elliot Wave", "Elliot+RSI+BB"],
+    options=["Moving Average", "RSI", "RSI+BB"],
     index=0
 )
 
@@ -184,7 +150,7 @@ if st.button("분석 시작"):
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
         df = yf.download(ticker, period="6mo", interval="1d", progress=False)
-        if df.empty or len(df) < 60 or 'Close' not in df.columns or df['Close'].dropna().empty:
+        if df.empty or len(df) < 60:
             continue
 
         score, msg = score_for_signal(method, df)
