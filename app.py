@@ -46,7 +46,6 @@ if ticker:
         if data.empty:
             st.warning(f"{ticker} 데이터가 없습니다.")
         else:
-            # 캔들차트 그리기 (가로 14, 세로 7)
             fig, axlist = mpf.plot(
                 data,
                 type='candle',
@@ -54,14 +53,15 @@ if ticker:
                 title=f"{ticker} 캔들 차트",
                 ylabel='가격',
                 figsize=(14, 7),
-                returnfig=True
+                returnfig=True,
+                mav=None,
+                volume=False,
             )
 
-            # 범례 제거
+            # legend 강제 제거 (있으면)
             for ax in axlist:
-                leg = ax.get_legend()
-                if leg:
-                    leg.remove()
+                if ax.legend_:
+                    ax.legend_.remove()
 
             st.pyplot(fig)
 
