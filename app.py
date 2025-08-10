@@ -5,40 +5,43 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
-# 제목
 st.markdown(
     "<h1 style='text-align: center;'>내 투자 전략 웹사이트</h1>",
     unsafe_allow_html=True
 )
 
-# 전략 선택 & 티커 입력
 col1, col2 = st.columns([1, 1])
 with col1:
     strategy = st.selectbox("전략 선택", ["전략 A", "전략 B", "전략 C"])
 with col2:
     ticker = st.text_input("티커 입력", value="AAPL")
 
-# 차트 표시
 if ticker:
     try:
         data = yf.download(ticker, period="1mo", interval="1d")
 
-        # NaN 제거 + float 변환
         data = data.dropna()
-        data = data.astype({
+
+        # 변환할 컬럼 목록 지정 (있는 컬럼만 필터링)
+        cols_to_convert = {
             "Open": float,
             "High": float,
             "Low": float,
             "Close": float,
-            "Adj Close": float,
             "Volume": int
-        })
+        }
+
+        if 'Adj Close' in data.columns:
+            cols_to_convert["Adj Close"] = float
+
+        # 타입 변환
+        data = data.astype(cols_to_convert)
+
         data.index.name = "Date"
 
         if data.empty:
             st.warning(f"{ticker} 데이터가 없습니다.")
         else:
-            # Matplotlib 캔들 차트 생성
             fig, axlist = mpf.plot(
                 data,
                 type='candle',
