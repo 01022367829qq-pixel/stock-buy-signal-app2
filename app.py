@@ -8,30 +8,19 @@ from scipy.signal import find_peaks
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    st.write("=== compute_rsi 진입 ===")
-    st.write(f"type(series): {type(series)}")
-    try:
-        series = pd.Series(series)
-        st.write("series converted to pd.Series")
-    except Exception as e:
-        st.write(f"series 변환 실패: {e}")
-        return pd.Series(dtype=float)
+    # series가 2차원일 경우 1차원으로 변환
+    if isinstance(series, pd.DataFrame):
+        series = series.squeeze()
+    if not isinstance(series, pd.Series):
+        try:
+            series = pd.Series(series)
+        except Exception:
+            return pd.Series(dtype=float)
 
-    try:
-        series = pd.to_numeric(series, errors='coerce')
-        st.write("series converted to numeric")
-    except Exception as e:
-        st.write(f"series to_numeric 실패: {e}")
+    series = pd.to_numeric(series, errors='coerce').dropna()
+    if series.empty:
         return pd.Series(dtype=float)
     
-    st.write(f"series null count before dropna: {series.isna().sum()}")
-    series = series.dropna()
-    st.write(f"series length after dropna: {len(series)}")
-
-    if series.empty:
-        st.write("series is empty after dropna")
-        return pd.Series(dtype=float)
-
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -39,7 +28,6 @@ def compute_rsi(series, period=14):
     avg_loss = loss.rolling(window=period).mean()
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
-    st.write(f"RSI sample:\n{rsi.tail(5)}")
     return rsi
 
 def compute_bollinger_bands(series, period=20, num_std=2):
@@ -109,7 +97,7 @@ def is_buy_signal_rsi(df):
     try:
         if rsi.isna().iat[-1]:
             return False
-        return rsi.iat[-1] <= 60
+        return rsi.iat[-1] <= 60  # RSI 조건
     except Exception:
         return False
 
@@ -221,6 +209,11 @@ if st.button("분석 시작"):
         if df.empty or len(df) < 60:
             continue
         
+        # (선택) 데이터 상태 점검 로그 출력 - 필요 없으면 주석 처리 가능
+        # st.write(f"{ticker} Close 데이터 샘플:")
+        # st.write(df['Close'].tail(10))
+        # st.write(f"Close 컬럼 NaN 개수: {df['Close'].isna().sum()}")
+
         score, msg = score_for_signal(method, df)
         if score > 0:
             entry = df['Close'].iat[-1]
