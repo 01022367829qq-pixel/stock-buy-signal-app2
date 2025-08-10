@@ -7,13 +7,11 @@ import plotly.graph_objects as go
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    # series가 pandas Series인지 확인, 아니면 변환 시도
     if not isinstance(series, pd.Series):
         try:
             series = pd.Series(series)
         except Exception:
             return pd.Series(dtype=float)
-    # 숫자형으로 변환, 실패한 값은 NaN 처리 후 제거
     series = pd.to_numeric(series, errors='coerce').dropna()
     if series.empty:
         return pd.Series(dtype=float)
@@ -72,10 +70,17 @@ def is_buy_signal_elliot_rsi_bb(df):
     if len(df) < 21:
         return False
     elliot_cond = is_buy_signal_elliot(df)
+    
     rsi = compute_rsi(df['Close'])
-    rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
+    if rsi.empty or rsi.isna().iat[-1]:
+        return False
+    rsi_cond = rsi.iat[-1] <= 40
+
     upper, lower = compute_bollinger_bands(df['Close'])
-    bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
+    if lower.isna().iat[-1]:
+        return False
+    bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
+
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
