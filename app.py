@@ -7,17 +7,8 @@ import plotly.graph_objects as go
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    # series가 pandas Series인지 확인, 아니면 변환 시도
-    if not isinstance(series, pd.Series):
-        try:
-            series = pd.Series(series)
-        except Exception:
-            return pd.Series(dtype=float)
-    # 숫자형으로 변환, 실패한 값은 NaN 처리 후 제거
+    # 안전하게 시리즈 숫자 변환 후 계산
     series = pd.to_numeric(series, errors='coerce').dropna()
-    if series.empty:
-        return pd.Series(dtype=float)
-    
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -59,7 +50,7 @@ def is_buy_signal_ma(df):
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0:
+    if rsi.empty:
         return False
     try:
         if rsi.isna().iat[-1]:
@@ -73,9 +64,16 @@ def is_buy_signal_elliot_rsi_bb(df):
         return False
     elliot_cond = is_buy_signal_elliot(df)
     rsi = compute_rsi(df['Close'])
-    rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
+    if rsi.empty:
+        return False
+    try:
+        rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
+    except Exception:
+        return False
     upper, lower = compute_bollinger_bands(df['Close'])
-    bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
+    if lower.empty or pd.isna(lower.iat[-1]):
+        return False
+    bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
@@ -150,7 +148,7 @@ selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500",
 
 method = st.radio(
     "분석 기법 선택 (하나만 선택)",
-    options=["Moving Average", "RSI", "Elliot+RSI+BB"],
+    options=["Elliot Wave", "Moving Average", "RSI", "Elliot+RSI+BB"],
     index=0
 )
 
