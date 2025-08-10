@@ -93,7 +93,7 @@ def is_buy_signal_rsi(df):
     try:
         if rsi.isna().iat[-1]:
             return False
-        return rsi.iat[-1] <= 60  # 수정된 RSI 기준
+        return rsi.iat[-1] <= 60  # RSI 기준 60으로 조정
     except Exception:
         return False
 
@@ -201,19 +201,34 @@ if st.button("분석 시작"):
 
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
-        # 여기 group_by=False로 명시
-        df = yf.download(ticker, period="1y", interval="1d", progress=False, group_by=False)
-        if df.empty or len(df) < 60:
-            continue
-        
-        # 데이터 상태 확인용 출력 (필요시 주석처리 가능)
+        df = yf.download(ticker, period="1y", interval="1d", progress=False)
+
+        st.write(f"{ticker} 컬럼 구조:")
+        st.write(df.columns)
+
+        # 멀티인덱스 컬럼 처리
+        if isinstance(df.columns, pd.MultiIndex):
+            if ticker in df.columns.levels[0]:
+                close_series = df[ticker]['Close']
+            else:
+                close_series = df[df.columns[0][0]]['Close']
+        else:
+            close_series = df['Close']
+
         st.write(f"{ticker} Close 데이터 샘플:")
-        st.write(df['Close'].tail(10))
-        st.write(f"Close 컬럼 NaN 개수: {df['Close'].isna().sum()}")
+        st.write(close_series.tail(10))
+        st.write(f"Close 컬럼 NaN 개수: {close_series.isna().sum()}")
+
+        if close_series.empty or close_series.isna().all():
+            continue
+
+        # df에 Close 컬럼 보장
+        df = df.assign(Close=close_series)
 
         score, msg = score_for_signal(method, df)
+
         if score > 0:
-            entry = df['Close'].iat[-1]
+            entry = close_series.iat[-1]
             target = entry * 1.05
             stop = entry * 0.95
             buy_stocks.append({
@@ -225,6 +240,7 @@ if st.button("분석 시작"):
                 "stop": stop,
                 "data": df
             })
+
         progress_bar.progress((i+1)/total)
 
     progress_bar.empty()
