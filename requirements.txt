@@ -4,3 +4,6 @@ ta
 streamlit
 plotly
 scipy
+streamlit
+yfinance
+mplfinance
