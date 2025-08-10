@@ -3,7 +3,7 @@ import yfinance as yf
 import mplfinance as mpf
 import pandas as pd
 import numpy as np
-import talib
+import ta
 from datetime import datetime, timedelta
 
 st.set_page_config(layout="wide")
@@ -65,13 +65,14 @@ def fetch_data(ticker):
     return data
 
 def calculate_indicators(df):
-    df['RSI'] = talib.RSI(df['Close'], timeperiod=14)
-    upper, middle, lower = talib.BBANDS(df['Close'], timeperiod=20)
-    df['BB_upper'] = upper
-    df['BB_middle'] = middle
-    df['BB_lower'] = lower
-    df['ADX'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
-    df['ATR'] = talib.ATR(df['High'], df['Low'], df['Close'], timeperiod=14)
+    # ta 라이브러리 기반 지표 계산
+    df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
+    bb = ta.volatility.BollingerBands(df['Close'], window=20, window_dev=2)
+    df['BB_upper'] = bb.bollinger_hband()
+    df['BB_middle'] = bb.bollinger_mavg()
+    df['BB_lower'] = bb.bollinger_lband()
+    df['ADX'] = ta.trend.adx(df['High'], df['Low'], df['Close'], window=14)
+    df['ATR'] = ta.volatility.average_true_range(df['High'], df['Low'], df['Close'], window=14)
     return df
 
 def generate_signal_with_targets(df):
