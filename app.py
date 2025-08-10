@@ -8,13 +8,12 @@ from scipy.signal import find_peaks
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    # 1차원 시리즈 데이터로 변환 강제
+    # 시리즈가 1차원인지 확인하고 변환
     if isinstance(series, pd.DataFrame):
-        series = series.iloc[:,0]
+        series = series.iloc[:, 0]
     series = pd.to_numeric(series, errors='coerce').dropna()
     if series.empty:
         return pd.Series(dtype=float)
-    
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -42,22 +41,17 @@ def detect_wave_points(close, distance=5, prominence=None):
 def is_elliot_wave_pattern(close):
     prominence = (np.nanmax(close) - np.nanmin(close)) * 0.05
     peaks, valleys = detect_wave_points(close, distance=5, prominence=prominence)
-    
     if len(peaks) < 3 or len(valleys) < 2:
         return False, None
-    
     points = np.sort(np.concatenate((peaks, valleys)))
     if len(points) < 5:
         return False, None
-    
     wave_points = points[:5]
     wave_lengths = np.diff(close.iloc[wave_points].values)
     fib_ratios = [0.382, 0.5, 0.618, 1.0, 1.618, 2.618]
     valid_fib = any(abs(abs(wave_lengths[1]) / abs(wave_lengths[0]) - fr) < 0.1 for fr in fib_ratios)
-    
     if not valid_fib:
         return False, None
-    
     return True, wave_points
 
 def is_buy_signal_elliot(df):
@@ -76,9 +70,9 @@ def is_buy_signal_ma(df):
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
     try:
-        if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
+        if short_ma.isna().iat[-2] or short_ma.isna().iat[-1]:
             return False
-        if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
+        if long_ma.isna().iat[-2] or long_ma.isna().iat[-1]:
             return False
         return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
     except Exception:
@@ -86,12 +80,12 @@ def is_buy_signal_ma(df):
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0:
+    if rsi.empty:
         return False
     try:
         if rsi.isna().iat[-1]:
             return False
-        return rsi.iat[-1] <= 60  # RSI 기준 수정
+        return rsi.iat[-1] <= 60  # RSI 기준값 60으로 설정
     except Exception:
         return False
 
@@ -99,17 +93,14 @@ def is_buy_signal_elliot_rsi_bb(df):
     if len(df) < 21:
         return False
     elliot_cond = is_buy_signal_elliot(df)
-    
     rsi = compute_rsi(df['Close'])
     if rsi.empty or rsi.isna().iat[-1]:
         return False
     rsi_cond = rsi.iat[-1] <= 60
-
     upper, lower = compute_bollinger_bands(df['Close'])
     if lower.isna().iat[-1]:
         return False
     bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
-
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
@@ -200,9 +191,10 @@ if st.button("분석 시작"):
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
         df = yf.download(ticker, period="1y", interval="1d", progress=False)
-        if df.empty or len(df) < 60 or bool(df['Close'].isna().all()):
+        # 데이터 상태 안전 체크
+        if df.empty or len(df) < 60 or (df['Close'].isna().sum() == len(df)):
             continue
-        
+
         score, msg = score_for_signal(method, df)
         if score > 0:
             entry = df['Close'].iat[-1]
