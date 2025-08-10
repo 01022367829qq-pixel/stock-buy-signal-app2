@@ -6,8 +6,35 @@ from datetime import datetime, timedelta
 
 st.set_page_config(layout="wide")
 
+# 제목 가운데 정렬
 st.markdown("<h1 style='text-align: center;'>내 투자 전략 웹사이트</h1>", unsafe_allow_html=True)
 
+# 전략별 설명
+with st.expander("전략별 설명 보기"):
+    st.markdown("""
+    ### 전략 A
+    - 단기 추세 추종 전략
+    - RSI, MACD 지표를 활용
+
+    ### 전략 B
+    - 중기 스윙 트레이딩
+    - 이동평균선 돌파 기반
+
+    ### 전략 C
+    - 장기 포지션 트레이딩
+    - 펀더멘털 및 기술적 지표 결합
+    """)
+
+# 투자 시 유의 사항
+with st.expander("투자 시 유의 사항"):
+    st.markdown("""
+    - 모든 투자는 원금 손실 가능성이 있습니다.
+    - 본 웹사이트의 전략은 참고용일 뿐, 투자 책임은 사용자 본인에게 있습니다.
+    - 시장 변동성 및 외부 요인에 따라 성과가 달라질 수 있습니다.
+    - 충분한 검토 후 투자 결정을 하시기 바랍니다.
+    """)
+
+# 전략 선택과 티커 입력 (왼쪽 정렬, 좁은 너비)
 col1, col2 = st.columns([1, 1])
 with col1:
     strategy = st.selectbox("전략 선택", ["전략 A", "전략 B", "전략 C"])
