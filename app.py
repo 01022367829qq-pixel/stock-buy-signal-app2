@@ -53,7 +53,7 @@ if ticker:
                 style='charles',
                 title=f"{ticker} 캔들 차트",
                 ylabel='가격',
-                figsize=(14, 7),
+                figsize=(12, 6),
                 returnfig=True
             )
             st.pyplot(fig)
