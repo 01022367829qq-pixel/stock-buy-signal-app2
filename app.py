@@ -2,7 +2,6 @@ import streamlit as st
 import yfinance as yf
 import mplfinance as mpf
 import pandas as pd
-import matplotlib.dates as mdates
 
 st.set_page_config(layout="wide")
 
@@ -47,16 +46,16 @@ if ticker:
                 style='charles',
                 title=f"{ticker} 1년 캔들 차트",
                 ylabel='가격',
-                figsize=(16, 9),  # 차트 좀 더 크게
+                figsize=(16, 9),
                 returnfig=True,
                 volume=False,
             )
 
-            # 오른쪽 여백 추가
+            # 오른쪽 여백 10% 추가
             ax = axlist[0]
             xmin, xmax = ax.get_xlim()
             xrange = xmax - xmin
-            ax.set_xlim(xmin, xmax + xrange * 0.05)
+            ax.set_xlim(xmin, xmax + xrange * 0.10)  # 10% 여백
 
             # legend 제거
             for ax in axlist:
