@@ -8,6 +8,8 @@ from scipy.signal import find_peaks
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
+    if not isinstance(series, pd.Series):
+        series = pd.Series(series)
     series = pd.to_numeric(series, errors='coerce').dropna()
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
@@ -25,15 +27,50 @@ def compute_bollinger_bands(series, period=20, num_std=2):
     lower = sma - num_std * std
     return upper, lower
 
+def detect_wave_points(close, distance=5, prominence=1):
+    close = pd.Series(close).dropna()
+    arr = close.values
+    if arr.ndim != 1:
+        raise ValueError("close 값은 1차원 배열이어야 합니다.")
+    peaks, _ = find_peaks(arr, distance=distance, prominence=prominence)
+    valleys, _ = find_peaks(-arr, distance=distance, prominence=prominence)
+    return peaks, valleys
+
+def is_elliot_wave_possible(df):
+    close = df['Close'].dropna()
+    if len(close) < 20:
+        return False
+    try:
+        distance = 5
+        prominence = (close.max() - close.min()) * 0.05
+        peaks, valleys = detect_wave_points(close, distance=distance, prominence=prominence)
+        # 최소 3개의 파동점(peak+valley)이 있어야 단순 엘리엇 웨이브 가능성 가정
+        if len(peaks) + len(valleys) >= 3:
+            return True
+        else:
+            return False
+    except Exception:
+        return False
+
+def is_buy_signal_elliot_rsi_bb(df):
+    if len(df) < 21:
+        return False
+    elliot_cond = is_elliot_wave_possible(df)
+    rsi = compute_rsi(df['Close'])
+    rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
+    upper, lower = compute_bollinger_bands(df['Close'])
+    bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
+    return elliot_cond and rsi_cond and bb_cond
+
 def is_buy_signal_ma(df):
     if len(df) < 51:
         return False
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
     try:
-        if short_ma.isna().iat[-2] or short_ma.isna().iat[-1]:
+        if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
             return False
-        if long_ma.isna().iat[-2] or long_ma.isna().iat[-1]:
+        if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
             return False
         return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
     except Exception:
@@ -41,56 +78,42 @@ def is_buy_signal_ma(df):
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if rsi.empty or rsi.isna().all():
+    if len(rsi) == 0:
         return False
     try:
+        if rsi.isna().iat[-1]:
+            return False
         return rsi.iat[-1] <= 40
     except Exception:
         return False
 
-def detect_wave_points(close, distance=5, prominence=1):
-    peaks, _ = find_peaks(close, distance=distance, prominence=prominence)
-    valleys, _ = find_peaks(-close, distance=distance, prominence=prominence)
-    return peaks, valleys
-
-def is_elliot_wave_possible(df):
+def is_buy_signal_elliot(df):
     close = df['Close']
-    if len(close) < 30:
+    if len(close) < 5:
         return False
-    peaks, valleys = detect_wave_points(close, distance=5, prominence=(close.max()-close.min())*0.05)
-    if len(peaks) >= 5 and len(valleys) >= 4:
-        return True
-    return False
-
-def is_buy_signal_elliot_rsi_bb(df):
-    if len(df) < 30:
+    try:
+        return (close.iat[-3] < close.iat[-2]) and (close.iat[-2] < close.iat[-1])
+    except Exception:
         return False
-    elliot_cond = is_elliot_wave_possible(df)
-    rsi = compute_rsi(df['Close'])
-    if rsi.empty or rsi.isna().all():
-        return False
-    rsi_cond = rsi.iat[-1] <= 40 if not pd.isna(rsi.iat[-1]) else False
-    upper, lower = compute_bollinger_bands(df['Close'])
-    if pd.isna(lower.iat[-1]):
-        return False
-    bb_cond = df['Close'].iat[-1] <= lower.iat[-1] * 1.02
-    return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
     score = 0
     msg = ""
-    if method == "Moving Average" and is_buy_signal_ma(df):
+    if method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
+        score = 50
+        msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
+    elif method == "Moving Average" and is_buy_signal_ma(df):
         score = 30
-        msg = "이동평균선 20/50 골든크로스 감지"
+        msg = "이동평균선 골든크로스 감지"
     elif method == "RSI" and is_buy_signal_rsi(df):
         score = 30
         msg = "RSI 과매도 구간 감지"
-    elif method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
-        score = 50
-        msg = "엘리엇 파동 가능성 + RSI 과매도 + 볼린저밴드 하단 근접 매수 신호"
+    elif method == "Elliot Wave" and is_buy_signal_elliot(df):
+        score = 40
+        msg = "엘리엇 웨이브 매수 신호 감지"
     return score, msg
 
-# --- 티커 그룹 리스트 ---
+# --- 티커 그룹 리스트 URL ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
@@ -145,7 +168,7 @@ selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500",
 
 method = st.radio(
     "분석 기법 선택 (하나만 선택)",
-    options=["Moving Average", "RSI", "Elliot+RSI+BB"],
+    options=["Moving Average", "RSI", "Elliot Wave", "Elliot+RSI+BB"],
     index=0
 )
 
@@ -161,7 +184,7 @@ if st.button("분석 시작"):
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
         df = yf.download(ticker, period="6mo", interval="1d", progress=False)
-        if df.empty or len(df) < 60:
+        if df.empty or len(df) < 60 or 'Close' not in df.columns or df['Close'].dropna().empty:
             continue
 
         score, msg = score_for_signal(method, df)
