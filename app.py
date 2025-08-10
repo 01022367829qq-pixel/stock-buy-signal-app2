@@ -16,7 +16,7 @@ with col2:
 
 if ticker:
     try:
-        data = yf.download(ticker, period="1mo", interval="1d")
+        data = yf.download(ticker, period="1y", interval="1d")  # 1년치 데이터
 
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.get_level_values(0)
@@ -45,9 +45,9 @@ if ticker:
                 data,
                 type='candle',
                 style='charles',
-                title=f"{ticker} 캔들 차트",
+                title=f"{ticker} 1년 캔들 차트",
                 ylabel='가격',
-                figsize=(14, 7),
+                figsize=(16, 9),  # 차트 좀 더 크게
                 returnfig=True,
                 volume=False,
             )
