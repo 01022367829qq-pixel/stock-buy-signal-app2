@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import mplfinance as mpf
+import pandas as pd
 
 st.set_page_config(layout="wide")
 
@@ -20,7 +21,18 @@ with col2:
 # 차트 표시
 if ticker:
     try:
-        data = yf.download(ticker, period="1mo", interval="1d").dropna()
+        data = yf.download(ticker, period="1mo", interval="1d")
+
+        # NaN 제거 + float 변환
+        data = data.dropna()
+        data = data.astype({
+            "Open": float,
+            "High": float,
+            "Low": float,
+            "Close": float,
+            "Adj Close": float,
+            "Volume": int
+        })
         data.index.name = "Date"
 
         if data.empty:
