@@ -16,20 +16,26 @@ with col2:
 if ticker:
     try:
         data = yf.download(ticker, period="1mo", interval="1d")
-        st.write("원본 데이터 샘플:")
+        st.write("원본 데이터:")
         st.write(data.head())
 
-        # 인덱스가 datetime인지 체크 및 변환
+        # 인덱스가 DatetimeIndex인지 체크, 아니면 변환
         if not isinstance(data.index, pd.DatetimeIndex):
             data.index = pd.to_datetime(data.index)
 
-        # NaN 처리 및 숫자 변환
-        data = data.dropna(how='any')
-        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-            data[col] = pd.to_numeric(data[col], errors='coerce')
-        data = data.dropna(subset=['Open', 'High', 'Low', 'Close', 'Volume'])
+        # 필요한 컬럼 존재 확인
+        required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+        for col in required_cols:
+            if col not in data.columns:
+                st.error(f"필수 컬럼 {col}이 데이터에 없습니다.")
+                st.stop()
 
-        # 타입 변환
+        # 숫자가 아닌 값 강제 NaN으로 바꾸고 dropna
+        for col in required_cols:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+        data = data.dropna(subset=required_cols)
+
+        # 타입 강제 변환
         data = data.astype({
             'Open': float,
             'High': float,
@@ -38,10 +44,9 @@ if ticker:
             'Volume': int
         })
 
-        st.write("변환 후 데이터 샘플:")
+        st.write("정제된 데이터:")
         st.write(data.head())
-        st.write(f"인덱스 타입: {type(data.index)}")
-        
+
         if data.empty:
             st.warning(f"{ticker} 데이터가 없습니다.")
         else:
