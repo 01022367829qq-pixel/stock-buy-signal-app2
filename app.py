@@ -65,53 +65,71 @@ def is_elliot_wave_pattern(close):
 def is_buy_signal_elliot(df):
     close = df['Close']
     if len(close) < 10:
+        st.write(f"{df.name} 엘리엇: 데이터 길이 부족")
         return False
     try:
         result, points = is_elliot_wave_pattern(close)
+        st.write(f"{df.name} 엘리엇: 결과={result}, 포인트={points}")
         return result
-    except Exception:
+    except Exception as e:
+        st.write(f"{df.name} 엘리엇 예외 발생: {e}")
         return False
 
 def is_buy_signal_ma(df):
     if len(df) < 51:
+        st.write(f"{df.name} 이동평균선: 데이터 길이 부족")
         return False
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
     try:
         if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
+            st.write(f"{df.name} 이동평균선: 단기 이동평균선 NaN 존재")
             return False
         if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
+            st.write(f"{df.name} 이동평균선: 장기 이동평균선 NaN 존재")
             return False
-        return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
-    except Exception:
+        golden_cross = (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
+        st.write(f"{df.name} 이동평균선 골든크로스 여부: {golden_cross}")
+        return golden_cross
+    except Exception as e:
+        st.write(f"{df.name} 이동평균선 예외 발생: {e}")
         return False
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
     if len(rsi) == 0:
+        st.write(f"{df.name} RSI: 계산된 RSI 데이터 없음")
         return False
     try:
         if rsi.isna().iat[-1]:
+            st.write(f"{df.name} RSI: 마지막 RSI 값이 NaN")
             return False
-        return rsi.iat[-1] <= 60  # 수정된 RSI 기준
-    except Exception:
+        st.write(f"{df.name} RSI 마지막 값: {rsi.iat[-1]:.2f}")
+        rsi_cond = rsi.iat[-1] <= 60
+        st.write(f"{df.name} RSI 조건 만족 여부: {rsi_cond}")
+        return rsi_cond
+    except Exception as e:
+        st.write(f"{df.name} RSI 예외 발생: {e}")
         return False
 
 def is_buy_signal_elliot_rsi_bb(df):
     if len(df) < 21:
+        st.write(f"{df.name} 엘리엇+RSI+BB: 데이터 길이 부족")
         return False
     elliot_cond = is_buy_signal_elliot(df)
-    
     rsi = compute_rsi(df['Close'])
     if rsi.empty or rsi.isna().iat[-1]:
+        st.write(f"{df.name} 엘리엇+RSI+BB: RSI 데이터 부족 또는 NaN")
         return False
     rsi_cond = rsi.iat[-1] <= 60
 
     upper, lower = compute_bollinger_bands(df['Close'])
     if lower.isna().iat[-1]:
+        st.write(f"{df.name} 엘리엇+RSI+BB: 볼린저밴드 하단 NaN")
         return False
     bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
-
+    st.write(f"{df.name} 엘리엇+RSI+BB 조건: elliot={elliot_cond}, rsi={rsi_cond}, bb={bb_cond}")
+    
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
@@ -129,6 +147,8 @@ def score_for_signal(method, df):
     elif method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
         score = 50
         msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
+    else:
+        st.write(f"{df.name} {method} 조건 미충족")
     return score, msg
 
 # --- 티커 그룹 리스트 URL ---
@@ -202,10 +222,12 @@ if st.button("분석 시작"):
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
         df = yf.download(ticker, period="1y", interval="1d", progress=False)
+        df.name = ticker  # 디버깅용 이름 할당
         if df.empty or len(df) < 60:
+            st.write(f"{ticker} 데이터 부족 또는 비어 있음")
             continue
         
-        # 데이터 상태 확인용 출력 (필요시 주석처리 가능)
+        # 데이터 상태 확인용 출력 (필요시 주석 처리 가능)
         st.write(f"{ticker} Close 데이터 샘플:")
         st.write(df['Close'].tail(10))
         st.write(f"Close 컬럼 NaN 개수: {df['Close'].isna().sum()}")
@@ -224,6 +246,8 @@ if st.button("분석 시작"):
                 "stop": stop,
                 "data": df
             })
+        else:
+            st.write(f"{ticker} 신호 점수 0 - 매수 신호 아님")
         progress_bar.progress((i+1)/total)
 
     progress_bar.empty()
