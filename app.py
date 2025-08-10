@@ -28,7 +28,7 @@ if ticker:
         fig.update_layout(
             autosize=False,
             width=1800,
-            height=675,
+            height=500,
             margin=dict(l=20, r=20, t=30, b=20),
             title=f"{ticker} 차트"
         )
