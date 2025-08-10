@@ -34,9 +34,7 @@ def compute_bollinger_bands(series, period=20, num_std=2):
     return upper, lower
 
 def detect_wave_points(close, distance=5, prominence=None):
-    # 1차원 numpy array로 변환
     close_arr = np.asarray(close)
-    # NaN 값 제거
     if np.isnan(close_arr).any():
         close_arr = close_arr[~np.isnan(close_arr)]
     peaks, _ = find_peaks(close_arr, distance=distance, prominence=prominence)
@@ -44,24 +42,17 @@ def detect_wave_points(close, distance=5, prominence=None):
     return peaks, valleys
 
 def is_elliot_wave_pattern(close):
-    # 파동 탐지 위한 기준값 계산
     prominence = (np.nanmax(close) - np.nanmin(close)) * 0.05
     peaks, valleys = detect_wave_points(close, distance=5, prominence=prominence)
     
-    # 단순히 파동 포인트 5개 이상인지 체크 (임의 기준)
     if len(peaks) < 3 or len(valleys) < 2:
         return False, None
     
-    # 파동 후보 선정 (간단한 5-3 파동 형태 체크)
-    # 여기서는 매우 단순화 했으며, 확장 가능
     points = np.sort(np.concatenate((peaks, valleys)))
     if len(points) < 5:
         return False, None
     
-    # 예시로 첫 5개 포인트만 사용
     wave_points = points[:5]
-    
-    # Fibonacci 비율 검사 (대략적인 비교)
     wave_lengths = np.diff(close.iloc[wave_points].values)
     fib_ratios = [0.382, 0.5, 0.618, 1.0, 1.618, 2.618]
     valid_fib = any(abs(abs(wave_lengths[1]) / abs(wave_lengths[0]) - fr) < 0.1 for fr in fib_ratios)
@@ -102,7 +93,7 @@ def is_buy_signal_rsi(df):
     try:
         if rsi.isna().iat[-1]:
             return False
-        return rsi.iat[-1] <= 40
+        return rsi.iat[-1] <= 60  # 여기만 수정: 40 → 60
     except Exception:
         return False
 
@@ -114,7 +105,7 @@ def is_buy_signal_elliot_rsi_bb(df):
     rsi = compute_rsi(df['Close'])
     if rsi.empty or rsi.isna().iat[-1]:
         return False
-    rsi_cond = rsi.iat[-1] <= 40
+    rsi_cond = rsi.iat[-1] <= 60  # 여기만 수정: 40 → 60
 
     upper, lower = compute_bollinger_bands(df['Close'])
     if lower.isna().iat[-1]:
@@ -255,7 +246,6 @@ if st.button("분석 시작"):
                 decreasing_line_color='red',
                 name=stock['ticker']
             )])
-            # 엘리엇 웨이브 포인트 라벨 표시 (선택 사항)
             if method == "Elliot+RSI+BB" or method == "Elliot Wave":
                 try:
                     _, points = is_elliot_wave_pattern(df['Close'])
