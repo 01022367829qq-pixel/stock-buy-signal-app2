@@ -5,10 +5,7 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
-st.markdown(
-    "<h1 style='text-align: center;'>내 투자 전략 웹사이트</h1>",
-    unsafe_allow_html=True
-)
+st.markdown("<h1 style='text-align: center;'>내 투자 전략 웹사이트</h1>", unsafe_allow_html=True)
 
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -20,22 +17,19 @@ if ticker:
     try:
         data = yf.download(ticker, period="1mo", interval="1d")
 
-        data = data.dropna()
+        # 엄격한 NaN 제거 및 숫자 변환
+        data = data.dropna(how='any')
+        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+        data = data.dropna(subset=['Open', 'High', 'Low', 'Close', 'Volume'])
 
-        # 변환할 컬럼 목록 지정 (있는 컬럼만 필터링)
-        cols_to_convert = {
-            "Open": float,
-            "High": float,
-            "Low": float,
-            "Close": float,
-            "Volume": int
-        }
-
-        if 'Adj Close' in data.columns:
-            cols_to_convert["Adj Close"] = float
-
-        # 타입 변환
-        data = data.astype(cols_to_convert)
+        data = data.astype({
+            'Open': float,
+            'High': float,
+            'Low': float,
+            'Close': float,
+            'Volume': int
+        })
 
         data.index.name = "Date"
 
