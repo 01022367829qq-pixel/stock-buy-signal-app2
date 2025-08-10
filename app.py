@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import mplfinance as mpf
 import pandas as pd
+from datetime import datetime, timedelta
 
 st.set_page_config(layout="wide")
 
@@ -15,7 +16,11 @@ with col2:
 
 if ticker:
     try:
-        data = yf.download(ticker, period="1y", interval="1d")  # 1년치 데이터
+        # 8개월 전 날짜 계산
+        start_date = datetime.today() - timedelta(days=240)
+        start_str = start_date.strftime('%Y-%m-%d')
+
+        data = yf.download(ticker, start=start_str, interval="1d")
 
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.get_level_values(0)
@@ -44,7 +49,7 @@ if ticker:
                 data,
                 type='candle',
                 style='charles',
-                title=f"{ticker} 1년 캔들 차트",
+                title=f"{ticker} 최근 8개월 캔들 차트",
                 ylabel='가격',
                 figsize=(16, 9),
                 returnfig=True,
