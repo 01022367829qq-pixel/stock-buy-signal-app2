@@ -4,7 +4,9 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-# --- 보조 함수들 ---
+# ==============================
+# 보조 함수
+# ==============================
 
 def compute_rsi(series, period=14):
     delta = series.diff()
@@ -15,6 +17,13 @@ def compute_rsi(series, period=14):
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
+
+def compute_bollinger_bands(series, period=20, num_std=2):
+    sma = series.rolling(window=period).mean()
+    std = series.rolling(window=period).std()
+    upper = sma + num_std * std
+    lower = sma - num_std * std
+    return upper, lower
 
 def is_buy_signal_elliot(df):
     close = df['Close']
@@ -50,6 +59,20 @@ def is_buy_signal_rsi(df):
     except Exception:
         return False
 
+# 엘리엇 + RSI + 볼린저밴드 결합 신호
+def is_buy_signal_elliot_rsi_bb(df):
+    if len(df) < 21:
+        return False
+    # 엘리엇 간단 검출
+    elliot_cond = is_buy_signal_elliot(df)
+    # RSI 조건
+    rsi = compute_rsi(df['Close'])
+    rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
+    # 볼린저밴드 조건
+    upper, lower = compute_bollinger_bands(df['Close'])
+    bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
+    return elliot_cond and rsi_cond and bb_cond
+
 def score_for_signal(method, df):
     score = 0
     msg = ""
@@ -62,9 +85,14 @@ def score_for_signal(method, df):
     elif method == "RSI" and is_buy_signal_rsi(df):
         score = 30
         msg = "RSI 과매도 구간 감지"
+    elif method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
+        score = 50
+        msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
     return score, msg
 
-# --- 티커 그룹 리스트 URL ---
+# ==============================
+# 티커 데이터
+# ==============================
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
@@ -75,7 +103,6 @@ def get_sp500_tickers():
 
 @st.cache_data(ttl=3600)
 def get_nasdaq100_tickers():
-    # 나스닥 100 직접 입력 100개 (예시 - 필요시 더 추가 가능)
     return [
         "AAPL","MSFT","AMZN","TSLA","NVDA","GOOGL","META","PEP","CSCO","ADBE",
         "PYPL","INTC","CMCSA","NFLX","TXN","QCOM","CHTR","AMD","SBUX","ISRG",
@@ -91,7 +118,6 @@ def get_nasdaq100_tickers():
 
 @st.cache_data(ttl=3600)
 def get_dj30_tickers():
-    # 다우존스 30 직접 입력
     return [
         "AAPL", "MSFT", "JNJ", "JPM", "V", "DIS", "HD", "INTC", "KO",
         "MRK", "NKE", "PG", "TRV", "UNH", "VZ", "WMT", "GS", "CRM", "MCD",
@@ -113,16 +139,24 @@ def get_tickers_for_group(group_name):
     else:
         return []
 
-# --- Streamlit UI ---
+# ==============================
+# Streamlit UI
+# ==============================
 
 st.title("그룹별 매수 신호 종목 분석기")
 
-selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs"])
+selected_group = st.selectbox(
+    "그룹 선택",
+    options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs"]
+)
 
-method = st.radio("분석 기법 선택 (하나만 선택)", options=["Elliot Wave", "Moving Average", "RSI"], index=1)
+method = st.radio(
+    "분석 기법 선택",
+    options=["Elliot Wave", "Moving Average", "RSI", "Elliot+RSI+BB"],
+    index=0
+)
 
 if st.button("분석 시작"):
-
     tickers = get_tickers_for_group(selected_group)
     buy_stocks = []
 
