@@ -35,8 +35,8 @@ def compute_bollinger_bands(series, period=20, num_std=2):
 
 def detect_wave_points(close, distance=5, prominence=None):
     close_arr = np.asarray(close)
-    # NaN 제거
-    close_arr = close_arr[~np.isnan(close_arr)]
+    if np.isnan(close_arr).any():
+        close_arr = close_arr[~np.isnan(close_arr)]
     peaks, _ = find_peaks(close_arr, distance=distance, prominence=prominence)
     valleys, _ = find_peaks(-close_arr, distance=distance, prominence=prominence)
     return peaks, valleys
@@ -53,7 +53,6 @@ def is_elliot_wave_pattern(close):
         return False, None
     
     wave_points = points[:5]
-    
     wave_lengths = np.diff(close.iloc[wave_points].values)
     fib_ratios = [0.382, 0.5, 0.618, 1.0, 1.618, 2.618]
     valid_fib = any(abs(abs(wave_lengths[1]) / abs(wave_lengths[0]) - fr) < 0.1 for fr in fib_ratios)
@@ -79,9 +78,9 @@ def is_buy_signal_ma(df):
     short_ma = df['Close'].rolling(window=20).mean()
     long_ma = df['Close'].rolling(window=50).mean()
     try:
-        if short_ma.isna().iat[-2] or short_ma.isna().iat[-1]:
+        if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
             return False
-        if long_ma.isna().iat[-2] or long_ma.isna().iat[-1]:
+        if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
             return False
         return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
     except Exception:
@@ -90,11 +89,13 @@ def is_buy_signal_ma(df):
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
     if len(rsi) == 0:
-        st.write("RSI 데이터 부족")
         return False
-    last_rsi = rsi.iat[-1]
-    st.write(f"RSI 마지막 값: {last_rsi}")
-    return last_rsi <= 70  # 기준 완화 (40->70)
+    try:
+        if rsi.isna().iat[-1]:
+            return False
+        return rsi.iat[-1] <= 60  # 수정된 RSI 기준
+    except Exception:
+        return False
 
 def is_buy_signal_elliot_rsi_bb(df):
     if len(df) < 21:
@@ -104,8 +105,8 @@ def is_buy_signal_elliot_rsi_bb(df):
     rsi = compute_rsi(df['Close'])
     if rsi.empty or rsi.isna().iat[-1]:
         return False
-    rsi_cond = rsi.iat[-1] <= 70  # 기준 완화
-    
+    rsi_cond = rsi.iat[-1] <= 60
+
     upper, lower = compute_bollinger_bands(df['Close'])
     if lower.isna().iat[-1]:
         return False
@@ -202,19 +203,14 @@ if st.button("분석 시작"):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
         df = yf.download(ticker, period="1y", interval="1d", progress=False)
         if df.empty or len(df) < 60:
-            st.write(f"{ticker} 데이터 부족: {len(df)}개")
             continue
         
-        # 디버깅: RSI 값 출력
-        rsi = compute_rsi(df['Close'])
-        if not rsi.empty:
-            st.write(f"{ticker} RSI 마지막 값: {rsi.iat[-1]:.2f}")
-        else:
-            st.write(f"{ticker} RSI 데이터 부족")
+        # 데이터 상태 확인용 출력 (필요시 주석처리 가능)
+        st.write(f"{ticker} Close 데이터 샘플:")
+        st.write(df['Close'].tail(10))
+        st.write(f"Close 컬럼 NaN 개수: {df['Close'].isna().sum()}")
 
         score, msg = score_for_signal(method, df)
-        st.write(f"{ticker} - 점수: {score}, 메시지: {msg}")  # 디버깅용
-
         if score > 0:
             entry = df['Close'].iat[-1]
             target = entry * 1.05
