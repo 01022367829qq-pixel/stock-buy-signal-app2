@@ -46,14 +46,14 @@ if ticker:
         if data.empty:
             st.warning(f"{ticker} 데이터가 없습니다.")
         else:
-            # 캔들차트 그리기 (가로 1.5배, 세로 1.5배)
+            # 캔들차트 그리기 (가로 14, 세로 7)
             fig, axlist = mpf.plot(
                 data,
                 type='candle',
                 style='charles',
                 title=f"{ticker} 캔들 차트",
                 ylabel='가격',
-                figsize=(18, 9),
+                figsize=(14, 7),
                 returnfig=True
             )
             st.pyplot(fig)
