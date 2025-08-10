@@ -7,7 +7,9 @@ import plotly.graph_objects as go
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    # 안전하게 pandas.Series로 변환
+    # 2차원 DataFrame이면 첫 번째 열만 사용
+    if isinstance(series, pd.DataFrame):
+        series = series.iloc[:, 0]
     if not isinstance(series, pd.Series):
         series = pd.Series(series)
     s = pd.to_numeric(series, errors='coerce')
@@ -21,6 +23,8 @@ def compute_rsi(series, period=14):
     return rsi
 
 def compute_bollinger_bands(series, period=20, num_std=2):
+    if isinstance(series, pd.DataFrame):
+        series = series.iloc[:, 0]
     if not isinstance(series, pd.Series):
         series = pd.Series(series)
     sma = series.rolling(window=period).mean()
