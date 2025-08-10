@@ -266,4 +266,10 @@ if st.button("분석 시작"):
                     pass
 
             fig.update_layout(
-                title=f"{stock['ticker']} 일간 캔
+                title=f"{stock['ticker']} 일간 캔들 차트",
+                xaxis_title="날짜",
+                yaxis_title="가격",
+                xaxis_rangeslider_visible=False,
+                template="plotly_white"
+            )
+            st.plotly_chart(fig, use_container_width=True)
