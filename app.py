@@ -53,6 +53,7 @@ def is_elliot_wave_pattern(close):
         return False, None
     
     wave_points = points[:5]
+    
     wave_lengths = np.diff(close.iloc[wave_points].values)
     fib_ratios = [0.382, 0.5, 0.618, 1.0, 1.618, 2.618]
     valid_fib = any(abs(abs(wave_lengths[1]) / abs(wave_lengths[0]) - fr) < 0.1 for fr in fib_ratios)
@@ -89,12 +90,16 @@ def is_buy_signal_ma(df):
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
     if len(rsi) == 0:
+        st.write("RSI: 데이터 부족")
         return False
     try:
         if rsi.isna().iat[-1]:
+            st.write("RSI: 최신 RSI가 NaN")
             return False
-        return rsi.iat[-1] <= 60  # 여기만 수정: 40 → 60
-    except Exception:
+        st.write(f"RSI 최신값: {rsi.iat[-1]}")
+        return rsi.iat[-1] <= 60  # <=60으로 변경
+    except Exception as e:
+        st.write("RSI 계산 오류:", e)
         return False
 
 def is_buy_signal_elliot_rsi_bb(df):
@@ -105,7 +110,7 @@ def is_buy_signal_elliot_rsi_bb(df):
     rsi = compute_rsi(df['Close'])
     if rsi.empty or rsi.isna().iat[-1]:
         return False
-    rsi_cond = rsi.iat[-1] <= 60  # 여기만 수정: 40 → 60
+    rsi_cond = rsi.iat[-1] <= 60  # RSI 기준도 60으로 변경
 
     upper, lower = compute_bollinger_bands(df['Close'])
     if lower.isna().iat[-1]:
