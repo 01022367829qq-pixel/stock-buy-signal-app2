@@ -3,13 +3,21 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from scipy.signal import find_peaks
 
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    # 안전하게 숫자 변환 후 처리
+    # series가 pandas Series인지 확인, 아니면 변환 시도
+    if not isinstance(series, pd.Series):
+        try:
+            series = pd.Series(series)
+        except Exception:
+            return pd.Series(dtype=float)
+    # 숫자형으로 변환, 실패한 값은 NaN 처리 후 제거
     series = pd.to_numeric(series, errors='coerce').dropna()
+    if series.empty:
+        return pd.Series(dtype=float)
+    
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -25,6 +33,15 @@ def compute_bollinger_bands(series, period=20, num_std=2):
     upper = sma + num_std * std
     lower = sma - num_std * std
     return upper, lower
+
+def is_buy_signal_elliot(df):
+    close = df['Close']
+    if len(close) < 5:
+        return False
+    try:
+        return (close.iat[-3] < close.iat[-2]) and (close.iat[-2] < close.iat[-1])
+    except Exception:
+        return False
 
 def is_buy_signal_ma(df):
     if len(df) < 51:
@@ -45,48 +62,29 @@ def is_buy_signal_rsi(df):
     if len(rsi) == 0:
         return False
     try:
-        if pd.isna(rsi.iat[-1]):
+        if rsi.isna().iat[-1]:
             return False
         return rsi.iat[-1] <= 40
-    except Exception:
-        return False
-
-def detect_wave_points(close, distance=5, prominence=None):
-    close_values = close.values
-    peaks, _ = find_peaks(close_values, distance=distance, prominence=prominence)
-    valleys, _ = find_peaks(-close_values, distance=distance, prominence=prominence)
-    return peaks, valleys
-
-def is_elliot_wave_possible(df):
-    close = df['Close']
-    if len(close) < 30:
-        return False
-    # 최대와 최소 가격 범위 기반 프로미넌스 설정
-    prominence_val = (close.max() - close.min()) * 0.05
-    try:
-        peaks, valleys = detect_wave_points(close, distance=5, prominence=prominence_val)
-        # 최소 3개의 봉우리와 2개의 골짜리가 있어야 기본적인 파동 감지 가능
-        if len(peaks) >= 3 and len(valleys) >= 2:
-            return True
-        else:
-            return False
     except Exception:
         return False
 
 def is_buy_signal_elliot_rsi_bb(df):
     if len(df) < 21:
         return False
-    elliot_cond = is_elliot_wave_possible(df)
+    elliot_cond = is_buy_signal_elliot(df)
     rsi = compute_rsi(df['Close'])
-    rsi_cond = (not pd.isna(rsi.iat[-1])) and (rsi.iat[-1] <= 40)
+    rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
     upper, lower = compute_bollinger_bands(df['Close'])
-    bb_cond = (not pd.isna(lower.iat[-1])) and (df['Close'].iat[-1] <= lower.iat[-1])
+    bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
     score = 0
     msg = ""
-    if method == "Moving Average" and is_buy_signal_ma(df):
+    if method == "Elliot Wave" and is_buy_signal_elliot(df):
+        score = 40
+        msg = "엘리엇 웨이브 매수 신호 감지"
+    elif method == "Moving Average" and is_buy_signal_ma(df):
         score = 30
         msg = "이동평균선 골든크로스 감지"
     elif method == "RSI" and is_buy_signal_rsi(df):
