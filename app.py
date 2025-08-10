@@ -8,18 +8,13 @@ from scipy.signal import find_peaks
 # --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
-    st.write(f"compute_rsi 입력 데이터 길이: {len(series)}")
-    st.write(series.tail())
     if not isinstance(series, pd.Series):
         try:
             series = pd.Series(series)
         except Exception:
-            st.write("compute_rsi: 입력 데이터를 pd.Series로 변환 실패")
             return pd.Series(dtype=float)
     series = pd.to_numeric(series, errors='coerce').dropna()
-    st.write(f"compute_rsi 숫자 변환 후 데이터 길이: {len(series)}")
     if series.empty:
-        st.write("compute_rsi: 숫자 변환 후 빈 시리즈 반환")
         return pd.Series(dtype=float)
     
     delta = series.diff()
@@ -94,11 +89,9 @@ def is_buy_signal_ma(df):
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
     if len(rsi) == 0:
-        st.write(f"{df.name} RSI 데이터 부족")
         return False
     try:
         if rsi.isna().iat[-1]:
-            st.write(f"{df.name} RSI 마지막 값 NaN")
             return False
         return rsi.iat[-1] <= 60  # 수정된 RSI 기준
     except Exception:
@@ -122,8 +115,6 @@ def is_buy_signal_elliot_rsi_bb(df):
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
-    st.write(f"분석 중인 티커: {df.name}")
-    st.write(f"Close 데이터 샘플:\n{df['Close'].tail()}")
     score = 0
     msg = ""
     if method == "Elliot Wave" and is_buy_signal_elliot(df):
@@ -138,10 +129,9 @@ def score_for_signal(method, df):
     elif method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
         score = 50
         msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
-    st.write(f"{df.name} 신호 점수: {score} - 메시지: {msg}")
     return score, msg
 
-# --- 티커 그룹 리스트 URL 및 함수들 ---
+# --- 티커 그룹 리스트 URL ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
@@ -211,17 +201,15 @@ if st.button("분석 시작"):
 
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
-        df = yf.download(ticker, period="1y", interval="1d", progress=False)
-        df.name = ticker  # 이름 붙이기
-
+        # 여기 group_by=False로 명시
+        df = yf.download(ticker, period="1y", interval="1d", progress=False, group_by=False)
         if df.empty or len(df) < 60:
-            st.write(f"{ticker} 데이터 부족 또는 비어있음, 건너뜀")
             continue
         
-        # Close 컬럼 NaN 체크
-        if df['Close'].isna().sum() > 0:
-            st.write(f"{ticker} Close 컬럼에 NaN 존재, 건너뜀")
-            continue
+        # 데이터 상태 확인용 출력 (필요시 주석처리 가능)
+        st.write(f"{ticker} Close 데이터 샘플:")
+        st.write(df['Close'].tail(10))
+        st.write(f"Close 컬럼 NaN 개수: {df['Close'].isna().sum()}")
 
         score, msg = score_for_signal(method, df)
         if score > 0:
