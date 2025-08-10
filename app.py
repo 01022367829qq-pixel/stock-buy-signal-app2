@@ -53,9 +53,16 @@ if ticker:
                 style='charles',
                 title=f"{ticker} 캔들 차트",
                 ylabel='가격',
-                figsize=(12, 6),
+                figsize=(14, 7),
                 returnfig=True
             )
+
+            # 범례 제거
+            for ax in axlist:
+                leg = ax.get_legend()
+                if leg:
+                    leg.remove()
+
             st.pyplot(fig)
 
     except Exception as e:
