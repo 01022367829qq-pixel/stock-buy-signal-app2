@@ -2,6 +2,8 @@ import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
 
+st.set_page_config(layout="wide")  # 전체 페이지 레이아웃 넓게
+
 st.markdown(
     "<h1 style='text-align: center;'>내 투자 전략 웹사이트</h1>",
     unsafe_allow_html=True
@@ -26,12 +28,10 @@ if ticker:
             close=data['Close']
         )])
         fig.update_layout(
-            autosize=False,
-            width=1800,
-            height=500,
+            height=675,
             margin=dict(l=20, r=20, t=30, b=20),
             title=f"{ticker} 차트"
         )
-        st.plotly_chart(fig, use_container_width=False)
+        st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("잘못된 티커이거나 데이터가 없습니다.")
