@@ -2,6 +2,8 @@ import streamlit as st
 import yfinance as yf
 import mplfinance as mpf
 import pandas as pd
+import numpy as np
+import talib
 from datetime import datetime, timedelta
 
 st.set_page_config(layout="wide")
@@ -41,59 +43,114 @@ with col1:
 with col2:
     ticker = st.text_input("티커 입력", value="AAPL")
 
+def fetch_data(ticker):
+    start_date = datetime.today() - timedelta(days=240)  # 약 8개월
+    start_str = start_date.strftime('%Y-%m-%d')
+    data = yf.download(ticker, start=start_str, interval="1d")
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+    if not isinstance(data.index, pd.DatetimeIndex):
+        data.index = pd.to_datetime(data.index)
+    required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+    for col in required_cols:
+        data[col] = pd.to_numeric(data[col], errors='coerce')
+    data = data.dropna(subset=required_cols)
+    data = data.astype({
+        'Open': float,
+        'High': float,
+        'Low': float,
+        'Close': float,
+        'Volume': int
+    })
+    return data
+
+def calculate_indicators(df):
+    df['RSI'] = talib.RSI(df['Close'], timeperiod=14)
+    upper, middle, lower = talib.BBANDS(df['Close'], timeperiod=20)
+    df['BB_upper'] = upper
+    df['BB_middle'] = middle
+    df['BB_lower'] = lower
+    df['ADX'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
+    df['ATR'] = talib.ATR(df['High'], df['Low'], df['Close'], timeperiod=14)
+    return df
+
+def generate_signal_with_targets(df):
+    rsi = df['RSI'].iloc[-1]
+    price = df['Close'].iloc[-1]
+    atr = df['ATR'].iloc[-1]
+    adx = df['ADX'].iloc[-1]
+    bb_lower = df['BB_lower'].iloc[-1]
+
+    rsi_signal = rsi <= 40
+    bb_signal = price <= bb_lower
+    adx_signal = adx > 20
+
+    buy_signal = rsi_signal and bb_signal and adx_signal
+
+    if buy_signal:
+        k1 = 2.5 if adx > 30 else 2.0
+        k2 = 0.8
+        target_price = price + k1 * atr
+        stop_loss = price - k2 * atr
+        comment = (
+            f"매수 신호: RSI {rsi:.1f} ≤ 40, "
+            f"주가가 볼린저 밴드 하단 근접, ADX {adx:.1f} (강한 추세), "
+            f"목표가 및 손절가 자동 산출 완료."
+        )
+    else:
+        target_price = None
+        stop_loss = None
+        comment = "매수 조건 미충족."
+
+    return buy_signal, target_price, stop_loss, comment
+
+def plot_candle_with_targets(df, ticker, target_price=None, stop_loss=None):
+    addplots = []
+    if target_price is not None:
+        target_line = pd.Series(target_price, index=df.index)
+        addplots.append(mpf.make_addplot(target_line, color='green', linestyle='--', width=1.5))
+    if stop_loss is not None:
+        stop_line = pd.Series(stop_loss, index=df.index)
+        addplots.append(mpf.make_addplot(stop_line, color='red', linestyle='--', width=1.5))
+
+    fig, axlist = mpf.plot(
+        df,
+        type='candle',
+        style='charles',
+        title=f"{ticker} 최근 8개월 캔들 차트",
+        ylabel='가격',
+        figsize=(16, 9),
+        returnfig=True,
+        volume=False,
+        addplot=addplots
+    )
+
+    ax = axlist[0]
+    xmin, xmax = ax.get_xlim()
+    xrange = xmax - xmin
+    ax.set_xlim(xmin, xmax + xrange * 0.10)  # 오른쪽 여백 10%
+
+    # legend 제거
+    for ax in axlist:
+        if ax.legend_:
+            ax.legend_.remove()
+
+    return fig
+
 if ticker:
     try:
-        # 8개월 전 날짜 계산
-        start_date = datetime.today() - timedelta(days=240)
-        start_str = start_date.strftime('%Y-%m-%d')
-
-        data = yf.download(ticker, start=start_str, interval="1d")
-
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = data.columns.get_level_values(0)
-
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index)
-
-        required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-
-        for col in required_cols:
-            data[col] = pd.to_numeric(data[col], errors='coerce')
-        data = data.dropna(subset=required_cols)
-
-        data = data.astype({
-            'Open': float,
-            'High': float,
-            'Low': float,
-            'Close': float,
-            'Volume': int
-        })
+        data = fetch_data(ticker)
 
         if data.empty:
             st.warning(f"{ticker} 데이터가 없습니다.")
         else:
-            fig, axlist = mpf.plot(
-                data,
-                type='candle',
-                style='charles',
-                title=f"{ticker} 최근 8개월 캔들 차트",
-                ylabel='가격',
-                figsize=(16, 9),
-                returnfig=True,
-                volume=False,
-            )
+            data = calculate_indicators(data)
+            buy_signal, target_price, stop_loss, comment = generate_signal_with_targets(data)
 
-            # 오른쪽 여백 10% 추가
-            ax = axlist[0]
-            xmin, xmax = ax.get_xlim()
-            xrange = xmax - xmin
-            ax.set_xlim(xmin, xmax + xrange * 0.10)  # 10% 여백
+            st.markdown(f"### 전략 결과")
+            st.write(comment)
 
-            # legend 제거
-            for ax in axlist:
-                if ax.legend_:
-                    ax.legend_.remove()
-
+            fig = plot_candle_with_targets(data, ticker, target_price, stop_loss)
             st.pyplot(fig)
 
     except Exception as e:
