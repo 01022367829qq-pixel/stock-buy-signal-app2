@@ -1,7 +1,7 @@
-import pandas as pd
 import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
+import pandas as pd
 
 st.set_page_config(layout="wide")
 
@@ -20,20 +20,9 @@ with col2:
 if ticker:
     try:
         data = yf.download(ticker, period="1mo", interval="1d")
-        
-        st.write("데이터 샘플:")
-        st.dataframe(data.head())
-        st.write("데이터 인덱스 타입:", type(data.index))
-        st.write("데이터 컬럼:", data.columns.tolist())
-        
-        # 인덱스가 DatetimeIndex인지 확인하고, 아니라면 변환
-        if not isinstance(data.index, (pd.DatetimeIndex)):
-            data.index = pd.to_datetime(data.index)
-        
-        # 컬럼이 존재하는지 체크
-        required_cols = ['Open', 'High', 'Low', 'Close']
-        if not all(col in data.columns for col in required_cols):
-            st.error("필요한 컬럼이 데이터에 없습니다.")
+
+        if data.empty:
+            st.warning("잘못된 티커이거나 데이터가 없습니다.")
         else:
             fig = go.Figure(data=[go.Candlestick(
                 x=data.index,
