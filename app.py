@@ -3,11 +3,8 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from scipy.signal import find_peaks
 
-# ==============================
-# 보조 함수
-# ==============================
+# --- 보조 함수들 ---
 
 def compute_rsi(series, period=14):
     s = pd.to_numeric(series, errors='coerce')
@@ -28,41 +25,17 @@ def compute_bollinger_bands(series, period=20, num_std=2):
     lower = sma - num_std * std
     return upper, lower
 
-# ==============================
-# 개선된 Elliot Wave 신호 자동화 함수
-# ==============================
-
-def is_elliot_wave_signal(df):
-    """
-    최대한 간단하게 파동 자동화 시도:
-    - 종가 기준 로컬 고점과 저점 찾기
-    - 최근 고점과 저점 패턴이 5-3 파동 구조와 어느 정도 부합하는지 체크
-    (엄밀한 앨리엇 파동 분석은 아니지만, 
-     피크 개수와 위치로 대략 파동 움직임 탐지 목적)
-    """
-    close = df['Close'].dropna()
-    if len(close) < 30:  # 데이터 충분한지 확인
+def is_buy_signal_ma(df):
+    if len(df) < 51:
         return False
-
+    short_ma = df['Close'].rolling(window=20).mean()
+    long_ma = df['Close'].rolling(window=50).mean()
     try:
-        # 로컬 최대값 (고점) 인덱스
-        peaks, _ = find_peaks(close.values, distance=3)  # 최소 3일 간격
-        # 로컬 최소값 (저점) 인덱스 - 반전신호
-        valleys, _ = find_peaks(-close.values, distance=3)
-
-        # 간단 조건: 최근 30일 내 고점과 저점 개수가 각각 3개 이상이면 파동 가능성 존재
-        recent_window = close.index[-30:]
-
-        recent_peaks = [p for p in peaks if close.index[p] >= recent_window[0]]
-        recent_valleys = [v for v in valleys if close.index[v] >= recent_window[0]]
-
-        if len(recent_peaks) >= 3 and len(recent_valleys) >= 3:
-            # 최근 마지막 고점 위치가 마지막 데이터 근처면 상승 파동 끝 근접 판단 가능
-            last_peak_pos = recent_peaks[-1]
-            if last_peak_pos >= len(close) - 5:
-                return True
-
-        return False
+        if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
+            return False
+        if bool(long_ma.isna().iat[-2]) or bool(long_ma.isna().iat[-1]):
+            return False
+        return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
     except Exception:
         return False
 
@@ -80,9 +53,10 @@ def is_buy_signal_rsi(df):
 def is_buy_signal_elliot_rsi_bb(df):
     if df is None or df.empty or len(df) < 21:
         return False
-
     try:
-        elliot_cond = is_elliot_wave_signal(df)
+        # 기존 단순 엘리엇 조건: 3일 연속 상승
+        close = df['Close']
+        elliot_cond = (close.iat[-3] < close.iat[-2]) and (close.iat[-2] < close.iat[-1])
 
         rsi = compute_rsi(df['Close'])
         rsi_valid = rsi.dropna()
@@ -107,9 +81,9 @@ def is_buy_signal_elliot_rsi_bb(df):
 def score_for_signal(method, df):
     score = 0
     msg = ""
-    if method == "Elliot Wave" and is_elliot_wave_signal(df):
-        score = 40
-        msg = "개선된 엘리엇 웨이브 매수 신호 감지"
+    if method == "Moving Average" and is_buy_signal_ma(df):
+        score = 30
+        msg = "이동평균선 골든크로스 감지"
     elif method == "RSI" and is_buy_signal_rsi(df):
         score = 30
         msg = "RSI 과매도 구간 감지"
@@ -118,9 +92,7 @@ def score_for_signal(method, df):
         msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
     return score, msg
 
-# ==============================
-# 티커 관련
-# ==============================
+# --- 티커 그룹 리스트 URL ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
@@ -167,9 +139,7 @@ def get_tickers_for_group(group_name):
     else:
         return []
 
-# ==============================
-# Streamlit UI
-# ==============================
+# --- Streamlit UI ---
 
 st.title("그룹별 매수 신호 종목 분석기")
 
@@ -180,7 +150,7 @@ selected_group = st.selectbox(
 
 method = st.radio(
     "분석 기법 선택",
-    options=["Elliot Wave", "RSI", "Elliot+RSI+BB"],
+    options=["Moving Average", "RSI", "Elliot+RSI+BB"],
     index=0
 )
 
