@@ -63,7 +63,11 @@ def is_elliot_wave_pattern(close):
     return True, wave_points
 
 def is_buy_signal_elliot(df):
-    close = df['Close']
+    try:
+        close = extract_close(df)
+    except Exception:
+        return False
+    
     if len(close) < 10:
         return False
     try:
@@ -73,10 +77,15 @@ def is_buy_signal_elliot(df):
         return False
 
 def is_buy_signal_ma(df):
-    if len(df) < 51:
+    try:
+        close = extract_close(df)
+    except Exception:
         return False
-    short_ma = df['Close'].rolling(window=20).mean()
-    long_ma = df['Close'].rolling(window=50).mean()
+    
+    if len(close) < 51:
+        return False
+    short_ma = close.rolling(window=20).mean()
+    long_ma = close.rolling(window=50).mean()
     try:
         if bool(short_ma.isna().iat[-2]) or bool(short_ma.isna().iat[-1]):
             return False
@@ -87,30 +96,40 @@ def is_buy_signal_ma(df):
         return False
 
 def is_buy_signal_rsi(df):
-    rsi = compute_rsi(df['Close'])
+    try:
+        close = extract_close(df)
+    except Exception:
+        return False
+    
+    rsi = compute_rsi(close)
     if len(rsi) == 0:
         return False
     try:
         if rsi.isna().iat[-1]:
             return False
-        return rsi.iat[-1] <= 60  # RSI 기준 60으로 조정
+        return rsi.iat[-1] <= 60  # RSI 조건 완화
     except Exception:
         return False
 
 def is_buy_signal_elliot_rsi_bb(df):
-    if len(df) < 21:
+    try:
+        close = extract_close(df)
+    except Exception:
+        return False
+    
+    if len(close) < 21:
         return False
     elliot_cond = is_buy_signal_elliot(df)
     
-    rsi = compute_rsi(df['Close'])
+    rsi = compute_rsi(close)
     if rsi.empty or rsi.isna().iat[-1]:
         return False
     rsi_cond = rsi.iat[-1] <= 60
 
-    upper, lower = compute_bollinger_bands(df['Close'])
+    upper, lower = compute_bollinger_bands(close)
     if lower.isna().iat[-1]:
         return False
-    bb_cond = df['Close'].iat[-1] <= lower.iat[-1]
+    bb_cond = close.iat[-1] <= lower.iat[-1]
 
     return elliot_cond and rsi_cond and bb_cond
 
@@ -130,6 +149,24 @@ def score_for_signal(method, df):
         score = 50
         msg = "엘리엇+RSI+볼린저밴드 매수 신호 감지"
     return score, msg
+
+def extract_close(df):
+    # 멀티인덱스 처리
+    if isinstance(df.columns, pd.MultiIndex):
+        if 'Close' in df.columns.get_level_values(1):
+            close_df = df.xs('Close', axis=1, level=1)
+            if close_df.shape[1] == 1:
+                return close_df.iloc[:, 0]
+            else:
+                # 여러 티커 데이터면 첫 번째 컬럼 선택 (필요하면 조정)
+                return close_df.iloc[:, 0]
+        else:
+            raise KeyError("'Close' 컬럼이 멀티인덱스에 없습니다.")
+    else:
+        if 'Close' in df.columns:
+            return df['Close']
+        else:
+            raise KeyError("'Close' 컬럼이 없습니다.")
 
 # --- 티커 그룹 리스트 URL ---
 
@@ -202,35 +239,23 @@ if st.button("분석 시작"):
     for i, ticker in enumerate(tickers):
         status_text.text(f"{ticker} 데이터 다운로드 및 분석 중 ({i+1}/{total})...")
         df = yf.download(ticker, period="1y", interval="1d", progress=False)
-
-        st.write(f"{ticker} 컬럼 구조:")
-        st.write(df.columns)
-
-        # 멀티인덱스 컬럼 처리
-        if isinstance(df.columns, pd.MultiIndex):
-            if ticker in df.columns.levels[0]:
-                close_series = df[ticker]['Close']
-            else:
-                close_series = df[df.columns[0][0]]['Close']
-        else:
-            close_series = df['Close']
-
-        st.write(f"{ticker} Close 데이터 샘플:")
-        st.write(close_series.tail(10))
-        st.write(f"Close 컬럼 NaN 개수: {close_series.isna().sum()}")
-
-        if close_series.empty or close_series.isna().all():
+        if df.empty or len(df) < 60:
             continue
 
-        # df에 Close 컬럼 보장
-        df = df.assign(Close=close_series)
-
-        score, msg = score_for_signal(method, df)
+        try:
+            score, msg = score_for_signal(method, df)
+        except Exception as e:
+            st.error(f"{ticker} 분석 중 오류 발생: {e}")
+            continue
 
         if score > 0:
-            entry = close_series.iat[-1]
-            target = entry * 1.05
-            stop = entry * 0.95
+            try:
+                close = extract_close(df)
+                entry = close.iat[-1]
+            except Exception:
+                entry = None
+            target = entry * 1.05 if entry else None
+            stop = entry * 0.95 if entry else None
             buy_stocks.append({
                 "ticker": ticker,
                 "score": score,
@@ -240,7 +265,6 @@ if st.button("분석 시작"):
                 "stop": stop,
                 "data": df
             })
-
         progress_bar.progress((i+1)/total)
 
     progress_bar.empty()
@@ -252,11 +276,14 @@ if st.button("분석 시작"):
         for stock in buy_stocks:
             st.subheader(f"{stock['ticker']} - 점수: {stock['score']}")
             st.write(stock['msg'])
-            st.markdown(f"""
-                - 진입가: {stock['entry']:.2f}  
-                - 목표가: {stock['target']:.2f}  
-                - 손절가: {stock['stop']:.2f}
-            """)
+            if stock['entry']:
+                st.markdown(f"""
+                    - 진입가: {stock['entry']:.2f}  
+                    - 목표가: {stock['target']:.2f}  
+                    - 손절가: {stock['stop']:.2f}
+                """)
+            else:
+                st.write("진입가 정보가 없습니다.")
             df = stock['data']
             fig = go.Figure(data=[go.Candlestick(
                 x=df.index,
@@ -270,13 +297,14 @@ if st.button("분석 시작"):
             )])
             if method == "Elliot+RSI+BB" or method == "Elliot Wave":
                 try:
-                    _, points = is_elliot_wave_pattern(df['Close'])
+                    close = extract_close(df)
+                    _, points = is_elliot_wave_pattern(close)
                     if points is not None:
                         for idx, pt in enumerate(points):
                             if pt < len(df):
                                 fig.add_annotation(
                                     x=df.index[pt],
-                                    y=df['Close'].iat[pt],
+                                    y=close.iat[pt],
                                     text=f"W{idx+1}",
                                     showarrow=True,
                                     arrowhead=2,
