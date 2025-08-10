@@ -9,7 +9,9 @@ import plotly.graph_objects as go
 # ==============================
 
 def compute_rsi(series, period=14):
-    delta = series.diff()
+    # 안전하게 숫자형으로 변환
+    s = pd.to_numeric(series, errors='coerce')
+    delta = s.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
     avg_gain = gain.rolling(window=period).mean()
@@ -19,8 +21,9 @@ def compute_rsi(series, period=14):
     return rsi
 
 def compute_bollinger_bands(series, period=20, num_std=2):
-    sma = series.rolling(window=period).mean()
-    std = series.rolling(window=period).std()
+    s = pd.to_numeric(series, errors='coerce')
+    sma = s.rolling(window=period).mean()
+    std = s.rolling(window=period).std()
     upper = sma + num_std * std
     lower = sma - num_std * std
     return upper, lower
@@ -50,28 +53,49 @@ def is_buy_signal_ma(df):
 
 def is_buy_signal_rsi(df):
     rsi = compute_rsi(df['Close'])
-    if len(rsi) == 0:
+    if rsi.dropna().empty:
         return False
     try:
-        if rsi.isna().iat[-1]:
-            return False
-        return rsi.iat[-1] <= 40
+        rsi_last = float(rsi.dropna().iloc[-1])
+        return rsi_last <= 40
     except Exception:
         return False
 
-# 엘리엇 + RSI + 볼린저밴드 결합 신호
+# ==============================
+# 수정된: 엘리엇 + RSI + 볼린저밴드 결합 신호 (안전한 인덱싱)
+# ==============================
 def is_buy_signal_elliot_rsi_bb(df):
-    if len(df) < 21:
+    # 기본 길이 체크
+    if df is None or df.empty or len(df) < 21:
         return False
-    # 엘리엇 간단 검출
-    elliot_cond = is_buy_signal_elliot(df)
-    # RSI 조건
-    rsi = compute_rsi(df['Close'])
-    rsi_cond = (not rsi.isna().iat[-1]) and (rsi.iat[-1] <= 40)
-    # 볼린저밴드 조건
-    upper, lower = compute_bollinger_bands(df['Close'])
-    bb_cond = (not lower.isna().iat[-1]) and (df['Close'].iat[-1] <= lower.iat[-1])
-    return elliot_cond and rsi_cond and bb_cond
+
+    try:
+        # 1) 엘리엇(단순) 조건
+        elliot_cond = is_buy_signal_elliot(df)
+
+        # 2) RSI 조건 (유효값 있는지 확인 후 비교)
+        rsi = compute_rsi(df['Close'])
+        rsi_valid = rsi.dropna()
+        if rsi_valid.empty:
+            return False
+        rsi_last = float(rsi_valid.iloc[-1])
+        rsi_cond = (rsi_last <= 40)
+
+        # 3) Bollinger Bands 조건 (유효값 확인 후 비교)
+        upper, lower = compute_bollinger_bands(df['Close'])
+        lower_valid = lower.dropna()
+        if lower_valid.empty:
+            return False
+        lower_last = float(lower_valid.iloc[-1])
+        close_last = float(pd.to_numeric(df['Close'].iloc[-1], errors='coerce'))
+        # 하단선 근처(예: 하단선 이하 또는 2% 이내)
+        bb_cond = (close_last <= lower_last * 1.02)
+
+        return elliot_cond and rsi_cond and bb_cond
+
+    except Exception:
+        # 내부 예외는 False로 처리 (필요하면 로그 출력 추가)
+        return False
 
 def score_for_signal(method, df):
     score = 0
