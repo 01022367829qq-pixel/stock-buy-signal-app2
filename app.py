@@ -25,10 +25,31 @@ def compute_bollinger_bands(series, period=20, num_std=2):
     lower = sma - num_std * std
     return upper, lower
 
+def is_buy_signal_ma(df):
+    if len(df) < 51:
+        return False
+    short_ma = df['Close'].rolling(window=20).mean()
+    long_ma = df['Close'].rolling(window=50).mean()
+    try:
+        if short_ma.isna().iat[-2] or short_ma.isna().iat[-1]:
+            return False
+        if long_ma.isna().iat[-2] or long_ma.isna().iat[-1]:
+            return False
+        return (short_ma.iat[-2] < long_ma.iat[-2]) and (short_ma.iat[-1] > long_ma.iat[-1])
+    except Exception:
+        return False
+
+def is_buy_signal_rsi(df):
+    rsi = compute_rsi(df['Close'])
+    if rsi.empty or rsi.isna().all():
+        return False
+    try:
+        return rsi.iat[-1] <= 40
+    except Exception:
+        return False
+
 def detect_wave_points(close, distance=5, prominence=1):
-    # 고점 (peaks)
     peaks, _ = find_peaks(close, distance=distance, prominence=prominence)
-    # 저점 (valleys)
     valleys, _ = find_peaks(-close, distance=distance, prominence=prominence)
     return peaks, valleys
 
@@ -37,44 +58,39 @@ def is_elliot_wave_possible(df):
     if len(close) < 30:
         return False
     peaks, valleys = detect_wave_points(close, distance=5, prominence=(close.max()-close.min())*0.05)
-    # 기본적으로 최소 5개 고점과 4개 저점이 있어야 상승 5파동 패턴 가능성 있다고 판단
     if len(peaks) >= 5 and len(valleys) >= 4:
         return True
-    else:
-        return False
+    return False
 
 def is_buy_signal_elliot_rsi_bb(df):
     if len(df) < 30:
         return False
-
     elliot_cond = is_elliot_wave_possible(df)
-
     rsi = compute_rsi(df['Close'])
-    if rsi.isna().all():
+    if rsi.empty or rsi.isna().all():
         return False
     rsi_cond = rsi.iat[-1] <= 40 if not pd.isna(rsi.iat[-1]) else False
-
     upper, lower = compute_bollinger_bands(df['Close'])
     if pd.isna(lower.iat[-1]):
         return False
-    bb_cond = df['Close'].iat[-1] <= lower.iat[-1] * 1.02  # 하단 밴드 2% 근처
-
+    bb_cond = df['Close'].iat[-1] <= lower.iat[-1] * 1.02
     return elliot_cond and rsi_cond and bb_cond
 
 def score_for_signal(method, df):
     score = 0
     msg = ""
-    if method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
+    if method == "Moving Average" and is_buy_signal_ma(df):
+        score = 30
+        msg = "이동평균선 20/50 골든크로스 감지"
+    elif method == "RSI" and is_buy_signal_rsi(df):
+        score = 30
+        msg = "RSI 과매도 구간 감지"
+    elif method == "Elliot+RSI+BB" and is_buy_signal_elliot_rsi_bb(df):
         score = 50
         msg = "엘리엇 파동 가능성 + RSI 과매도 + 볼린저밴드 하단 근접 매수 신호"
-    elif method == "RSI":
-        rsi = compute_rsi(df['Close'])
-        if not rsi.isna().all() and rsi.iat[-1] <= 40:
-            score = 30
-            msg = "RSI 과매도 구간 감지"
     return score, msg
 
-# --- 티커 그룹 리스트 URL ---
+# --- 티커 그룹 리스트 ---
 
 SP500_TICKERS_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
@@ -123,13 +139,13 @@ def get_tickers_for_group(group_name):
 
 # --- Streamlit UI ---
 
-st.title("엘리엇 파동 + RSI + 볼린저 밴드 매수 신호 분석기")
+st.title("그룹별 매수 신호 종목 분석기")
 
 selected_group = st.selectbox("그룹 선택", options=["Nasdaq 100", "S&P 500", "Dow Jones 30", "Sector ETFs"])
 
 method = st.radio(
     "분석 기법 선택 (하나만 선택)",
-    options=["Elliot+RSI+BB", "RSI"],
+    options=["Moving Average", "RSI", "Elliot+RSI+BB"],
     index=0
 )
 
