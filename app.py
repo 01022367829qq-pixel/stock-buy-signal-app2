@@ -17,6 +17,10 @@ if ticker:
     try:
         data = yf.download(ticker, period="1mo", interval="1d")
 
+        # 데이터 확인용 출력
+        st.write("다운로드된 데이터 샘플:")
+        st.write(data.head())
+
         # 엄격한 NaN 제거 및 숫자 변환
         data = data.dropna(how='any')
         for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
@@ -33,9 +37,13 @@ if ticker:
 
         data.index.name = "Date"
 
+        # 인덱스 타입 확인용 출력
+        st.write(f"데이터 인덱스 타입: {type(data.index)}")
+
         if data.empty:
             st.warning(f"{ticker} 데이터가 없습니다.")
         else:
+            # mplfinance plot 호출
             fig, axlist = mpf.plot(
                 data,
                 type='candle',
